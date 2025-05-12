@@ -79,10 +79,25 @@ Keep in mind this specification list is based off the version noted at the top o
 | 8.3.6               | Retrieve Status                                                                  |     ❌      |
 | 8.3.7               | Check Status                                                                     |     ❌      |
 | 8.4.                | Historical resolution                                                            |     ❌      |
-| 8.4.                | Support time query parameter                                                     |     ❌      |
+| 8.4.1               | Support time query parameter                                                     |     ❌      |
 | **9.**              | **Status List Aggregation**                                                      |             |
 | 9.1.                | Issuer Metadata                                                                  |     ❌      |
 | 9.2.                | Status List Parameter                                                            |     ❌      |
 | 9.3.                | Status List Aggregation in JSON Format                                           |     ❌      |
 | **10.**             | **X.509 Certificate Extensions**                                                 |             |
 | 10.1.               | Extended Key Usage Extension                                                     |     ❌      |
+| **11.**             | **Security Considerations**                                                      |   **N/A**   |
+| **12.**             | **Privacy Considerations**                                                       |             |
+| 12.1.               | Observability of Issuers                                                         |     ❌      |
+| 12.2.               | Malicious Issuers                                                                |     ❌      |
+| 12.3.               | Observability of Relying Parties                                                 |     ❌      |
+| 12.4.               | Observability of Outsiders                                                       |     ❌      |
+| 12.5.               | Unlinkability                                                                    |     ❌      |
+| 12.5.1.             | Colluding Relying Parties                                                        |     ❌      |
+| 12.5.2.             | Colluding Status Issuer and Relying Party                                        |     ❌      |
+| 12.6.               | External Status Provider for Privacy                                             |     ❌      |
+| 12.7.               | Historical Resolution                                                            |     ❌      |
+| 12.8.               | Status Types                                                                     |     ❌      |
+| **13.**             | **Implementation Considerations**                                                |             |
+| **14.**             | **IANA Considerations**                                                          |   **N/A**   |
+
