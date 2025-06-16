@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::status_list::StatusList;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatusListTokenClaims {
     pub sub: String,
     pub iat: i64,
@@ -43,7 +43,7 @@ impl StatusListTokenClaims {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatusListToken {
     header: Header,
     claims: StatusListTokenClaims,

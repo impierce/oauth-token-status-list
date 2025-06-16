@@ -1,5 +1,3 @@
-pub mod status_types;
-
 use base64::{engine::general_purpose, Engine as _};
 use flate2::write::ZlibEncoder;
 use flate2::{read::ZlibDecoder, Compression};
@@ -155,8 +153,38 @@ impl StatusList {
     }
 }
 
-// Helpers
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum StatusType {
+    VALID = 0,
+    INVALID = 1,
+    SUSPENDED = 2,
+    // The Status Type value 0x03 and Status Type values in the range 0x0B
+    // until 0x0F are permanently reserved as application specific.
+    // Meaning free for the implementer to implement.
+    UNDEFINED,
+    // All other Status Type values are reserved for future registration.
+    RESERVED,
+}
 
+impl TryFrom<u8> for StatusType {
+    type Error = String;
+
+    fn try_from(value: u8) -> Result<Self, String> {
+        match value {
+            0 => Ok(StatusType::VALID),
+            1 => Ok(StatusType::INVALID),
+            2 => Ok(StatusType::SUSPENDED),
+            3 | 11..=15 => Ok(StatusType::UNDEFINED), // Application specific
+            _ => Err(format!(
+                "Cannot use a reserved Status Type value: {}",
+                value
+            )),
+        }
+    }
+}
+
+// Helpers
+#[derive(Debug, Clone)]
 pub enum IndexInput {
     Single(u8),
     Multiple(Vec<u8>),

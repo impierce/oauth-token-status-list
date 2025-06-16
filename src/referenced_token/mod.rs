@@ -1,7 +1,7 @@
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReferencedToken {
     header: Header,
     claims: ReferencedTokenClaims,
@@ -23,7 +23,7 @@ impl ReferencedToken {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 
 pub struct ReferencedTokenClaims {
     pub status: Status,
@@ -34,13 +34,7 @@ pub struct ReferencedTokenClaims {
 }
 
 impl ReferencedTokenClaims {
-    pub fn new(
-        sub: String,
-        iat: i64,
-        exp: Option<i64>,
-        ttl: Option<u64>,
-        status: Status,
-    ) -> Self {
+    pub fn new(sub: String, iat: i64, exp: Option<i64>, ttl: Option<u64>, status: Status) -> Self {
         Self {
             sub,
             iat,
@@ -51,12 +45,12 @@ impl ReferencedTokenClaims {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Status {
     pub status_list_ref: StatusListRef,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatusListRef {
     pub idx: i64,
     pub uri: String,
