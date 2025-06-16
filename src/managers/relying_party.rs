@@ -18,7 +18,7 @@ impl StatusListResponseType {
     }
 }
 
-/// Sends a status list request to the provided URI and returns the raw response body.
+/// Sends a status list request to the provided URI and returns the JWT string.
 pub async fn fetch_status_list(
     uri: &str,
     accept_format: StatusListResponseType,
@@ -42,8 +42,6 @@ pub async fn fetch_status_list(
     }
 
     let jwt_string = res.text().await?;
-
-    println!("Received status list response: {}", jwt_string);
 
     Ok(jwt_string)
 }
