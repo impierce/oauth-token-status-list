@@ -3,16 +3,22 @@ pub mod status_types;
 use base64::{engine::general_purpose, Engine as _};
 use flate2::write::ZlibEncoder;
 use flate2::{read::ZlibDecoder, Compression};
+use serde::{Deserialize, Serialize};
 use std::io::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct StatusList {
+    #[serde(rename = "bits")]
     pub status_size: Bits,
+    #[serde(rename = "lst")]
     pub status_list: Vec<u8>,
+    // todo: not implemented yet
+    pub aggregation_uri: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum Bits {
+    #[default]
     One = 1,
     Two = 2,
     Four = 4,
@@ -166,6 +172,7 @@ mod test {
         let mut status_list = StatusList {
             status_size: Bits::One,
             status_list: vec![0u8; 131072],
+            ..Default::default()
         };
 
         // I did not use fn set_index_array here to mimic the example from the spec as much as possible.
@@ -190,6 +197,7 @@ mod test {
         let mut status_list = StatusList {
             status_size: Bits::Two,
             status_list: vec![0u8; 131072 * 2],
+            ..Default::default()
         };
 
         // I did not use fn set_index_array here to mimic the example from the spec as much as possible.
@@ -214,6 +222,7 @@ mod test {
         let mut status_list = StatusList {
             status_size: Bits::Four,
             status_list: vec![0u8; 131072 * 4],
+            ..Default::default()
         };
 
         // I did not use fn set_index_array here to mimic the example from the spec as much as possible.
@@ -243,6 +252,7 @@ mod test {
         let mut status_list = StatusList {
             status_size: Bits::Eight,
             status_list: vec![0u8; 131072 * 8],
+            ..Default::default()
         };
 
         let indices = vec![
@@ -273,7 +283,6 @@ mod test {
         ];
 
         let values: Vec<u8> = (0..indices.len()).map(|i| i as u8).collect();
-
 
         status_list
             .set_index_array(indices, IndexInput::Multiple(values))
