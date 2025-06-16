@@ -8,7 +8,9 @@ use crate::status_list::StatusList;
 pub struct StatusListTokenClaims {
     pub sub: String,
     pub iat: i64,
+    #[serde(default)]
     pub exp: Option<i64>,
+    #[serde(default)]
     pub ttl: Option<u64>,
     pub status_list: StatusList,
 }
@@ -45,8 +47,8 @@ impl StatusListTokenClaims {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatusListToken {
-    header: Header,
-    claims: StatusListTokenClaims,
+    pub header: Header,
+    pub claims: StatusListTokenClaims,
 }
 
 impl StatusListToken {
@@ -82,35 +84,23 @@ impl std::default::Default for StatusListToken {
 
 #[cfg(test)]
 mod test {
-    use jsonwebtoken::{decode, DecodingKey, Validation};
-
     use super::*;
-
-    const EC_PUBLIC_KEY_PEM: &str = r#"-----BEGIN PUBLIC KEY-----
-        MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEG4COimEw4x4lAnDqLM4029GjKNBLge4j
-        q92KZPSeRXhDXODHXXBOOSu7+YbDshbsNKjPsSbvM6ZjQ/vRw9YwhA==
-        -----END PUBLIC KEY-----"#;
-
-    const TEST_EC_PRIVATE_KEY_PEM: &str = r#"-----BEGIN PRIVATE KEY-----
-        MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgBF0QIxQC0cTZ14/l
-        IA1sl8ro4tunyt8k+CSnURokecahRANCAATZ93VkkW5FR2oeZn3Ginkjk7/iuGNZ
-        miAdcEKuRHo0NZOSV5gJZUPLh4osJ9iSU903e7J8QelkVkf1N9fFRYaB
-        -----END PRIVATE KEY-----"#;
+    use jsonwebtoken::{decode, DecodingKey, Validation};
 
     #[test]
     pub fn test_create_default_jwt() {
+        // Using the HS256 algorithm for simplicity in this test.
         let status_list_token =
-            StatusListToken::new(Algorithm::ES256, StatusListTokenClaims::default());
+            StatusListToken::new(Algorithm::HS256, StatusListTokenClaims::default());
 
-        let encoding_key = EncodingKey::from_ec_pem(TEST_EC_PRIVATE_KEY_PEM.as_bytes()).unwrap();
+        let encoding_key = &EncodingKey::from_secret("secret".as_ref());
 
         let jwt = status_list_token.create_jwt(&encoding_key).unwrap();
 
         println!("JWT: {}", jwt);
 
-        let decoding_key =
-            DecodingKey::from_ec_pem(EC_PUBLIC_KEY_PEM.as_bytes()).expect("valid pub key");
-        let mut validation = Validation::new(Algorithm::ES256);
+        let decoding_key = DecodingKey::from_secret("secret".as_ref());
+        let mut validation = Validation::new(Algorithm::HS256);
 
         validation.set_required_spec_claims(&["sub", "iat", "status_list"]);
 
