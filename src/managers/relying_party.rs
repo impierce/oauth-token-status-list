@@ -4,16 +4,28 @@ use reqwest::{header, redirect::Policy, Client};
 
 /// The media types defined for status list tokens.
 #[derive(Debug)]
-pub enum StatusListResponseType {
+pub enum StatusListTokenResponseType {
     Jwt,
     Cwt,
 }
 
-impl StatusListResponseType {
-    fn as_str(&self) -> &'static str {
+impl StatusListTokenResponseType {
+    pub fn as_str(&self) -> &'static str {
         match self {
-            StatusListResponseType::Jwt => "application/statuslist+jwt",
-            StatusListResponseType::Cwt => "application/statuslist+cwt",
+            StatusListTokenResponseType::Jwt => "application/statuslist+jwt",
+            StatusListTokenResponseType::Cwt => "application/statuslist+cwt",
+        }
+    }
+}
+
+impl TryFrom<&str> for StatusListTokenResponseType {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "application/statuslist+jwt" => Ok(StatusListTokenResponseType::Jwt),
+            "application/statuslist+cwt" => Ok(StatusListTokenResponseType::Cwt),
+            _ => Err("Unsupported response type".to_string()),
         }
     }
 }
@@ -21,7 +33,7 @@ impl StatusListResponseType {
 /// Sends a status list request to the provided URI and returns the JWT string.
 pub async fn fetch_status_list(
     uri: &str,
-    accept_format: StatusListResponseType,
+    accept_format: StatusListTokenResponseType,
 ) -> Result<String, Box<dyn Error>> {
     // 3xx redirects should be followed, but infinite loops are caught after 5 redirects.
     let client = Client::builder()
@@ -30,7 +42,8 @@ pub async fn fetch_status_list(
 
     let res = client
         .get(uri)
-        .header(header::ACCEPT, accept_format.as_str())
+        .header(header::CONTENT_TYPE, accept_format.as_str())
+        .header("X-Status-List", "foo")
         .send()
         .await?;
 
@@ -49,10 +62,11 @@ pub async fn fetch_status_list(
 #[cfg(test)]
 mod tests {
     use jsonwebtoken::{decode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+    use reqwest::header::CONTENT_TYPE;
     use wiremock::{matchers::method, Mock, MockServer, ResponseTemplate};
 
     use crate::{
-        managers::relying_party::{fetch_status_list, StatusListResponseType},
+        managers::relying_party::{fetch_status_list, StatusListTokenResponseType},
         status_list_token::{StatusListToken, StatusListTokenClaims},
     };
 
@@ -79,11 +93,15 @@ mod tests {
 
         // Create a new `request_uri` endpoint on the mock server and load it with the Status List JWT.
         Mock::given(method("GET"))
-            .respond_with(ResponseTemplate::new(200).set_body_string(status_list_jwt))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .insert_header(CONTENT_TYPE.as_str(), "application/statuslist+jwt")
+                    .set_body_string(status_list_jwt),
+            )
             .mount(&mock_server)
             .await;
 
-        let response = fetch_status_list(&server_url, StatusListResponseType::Jwt)
+        let response = fetch_status_list(&server_url, StatusListTokenResponseType::Jwt)
             .await
             .unwrap();
 
