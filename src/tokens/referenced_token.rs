@@ -1,6 +1,8 @@
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 
+use crate::error::OAuthTSLError;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReferencedToken {
     header: Header,
@@ -18,8 +20,8 @@ impl ReferencedToken {
         }
     }
 
-    pub fn create_jwt(self, key: &EncodingKey) -> Result<String, String> {
-        encode(&self.header, &self.claims, key).map_err(|e| e.to_string())
+    pub fn create_jwt(self, key: &EncodingKey) -> Result<String, OAuthTSLError> {
+        Ok(encode(&self.header, &self.claims, key)?)
     }
 }
 

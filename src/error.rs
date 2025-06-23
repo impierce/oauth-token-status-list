@@ -5,7 +5,7 @@ use axum::{
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum StatusHandlerError {
+pub enum OAuthTSLError {
     #[error("Invalid content type passed in request header")]
     InvalidContentType,
     #[error("Invalid status list key passed in request header")]
@@ -16,26 +16,40 @@ pub enum StatusHandlerError {
     RequestError(#[from] reqwest::Error),
     #[error("An unexpected error occurred: {0}")]
     UnexpectedError(String),
+    #[error("Status List index, {0}, not found")]
+    IndexNotFound(usize),
+    #[error("Status value invalid: {0}")]
+    InvalidStatusType(u8),
+    #[error("When setting multiple values indices and values must have the same length")]
+    InvalidIndicesValuesPair,
+    #[error("Error occured during standard I/O operation: {0}")]
+    IOError(#[from] std::io::Error),
+    #[error("Error while base64 decoding: {0}")]
+    Base64DecodeError(#[from] base64::DecodeError),
+    #[error("Unable to create JWT: {0}")]
+    CreateJwtError(#[from] jsonwebtoken::errors::Error),
 }
 
-impl IntoResponse for StatusHandlerError {
+impl IntoResponse for OAuthTSLError {
     fn into_response(self) -> Response {
         match self {
-            StatusHandlerError::InvalidContentType => {
+            OAuthTSLError::InvalidContentType => {
                 (StatusCode::BAD_REQUEST, self.to_string()).into_response()
             }
-            StatusHandlerError::InvalidStatusListKey => {
+            OAuthTSLError::InvalidStatusListKey => {
                 (StatusCode::BAD_REQUEST, self.to_string()).into_response()
             }
-            StatusHandlerError::InternalError => {
+            OAuthTSLError::InternalError => {
                 (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response()
             }
-            StatusHandlerError::RequestError(_) => {
+            OAuthTSLError::RequestError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response()
             }
-            StatusHandlerError::UnexpectedError(msg) => {
+            OAuthTSLError::UnexpectedError(msg) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, msg).into_response()
             }
+            // Not all errors will have nor need a specific status code and Response type.
+            _ => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response(),
         }
     }
 }

@@ -1,4 +1,5 @@
-use super::{error::StatusHandlerError, relying_party::StatusListTokenResponseType};
+use super::relying_party::StatusListTokenResponseType;
+use crate::error::OAuthTSLError;
 use axum::{
     extract::State,
     http::{HeaderMap, HeaderValue, StatusCode},
@@ -13,19 +14,19 @@ use std::sync::Arc;
 async fn status_provider_handler(
     State(provider): State<Arc<StatusProvider>>,
     headers: HeaderMap,
-) -> Result<Response, StatusHandlerError> {
+) -> Result<Response, OAuthTSLError> {
     let status_list_key = headers
         .get("x-status-list")
         .and_then(|value| value.to_str().ok())
-        .ok_or(StatusHandlerError::InvalidStatusListKey)?;
+        .ok_or(OAuthTSLError::InvalidStatusListKey)?;
     let content_type = headers
         .get("content-type")
         .and_then(|content_type_value| content_type_value.to_str().ok())
-        .ok_or(StatusHandlerError::InvalidContentType)?;
+        .ok_or(OAuthTSLError::InvalidContentType)?;
     let token_type = StatusListTokenResponseType::try_from(content_type)
-        .map_err(|_| StatusHandlerError::InvalidContentType)?;
+        .map_err(|_| OAuthTSLError::InvalidContentType)?;
 
-    Ok::<Response, StatusHandlerError>(
+    Ok::<Response, OAuthTSLError>(
         provider
             .serve_status_list_token(token_type, status_list_key)
             .await,

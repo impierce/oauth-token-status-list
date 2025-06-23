@@ -4,6 +4,8 @@ use flate2::{read::ZlibDecoder, Compression};
 use serde::{Deserialize, Serialize};
 use std::io::prelude::*;
 
+use crate::error::OAuthTSLError;
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct StatusList {
     #[serde(rename = "bits")]
@@ -39,13 +41,10 @@ impl Bits {
 }
 
 impl StatusList {
-    pub fn get_index(&self, index: usize) -> Result<u8, String> {
+    pub fn get_index(&self, index: usize) -> Result<u8, OAuthTSLError> {
         let status_list_len = self.status_list.len() * (8 / self.status_size.as_usize());
         if index >= status_list_len {
-            return Err(format!(
-                "Index {} out of bounds for status list of size {}",
-                index, status_list_len
-            ));
+            return Err(OAuthTSLError::IndexNotFound(index));
         }
 
         let byte = self.status_list[index * self.status_size.as_usize() / 8];
@@ -70,20 +69,14 @@ impl StatusList {
         }
     }
 
-    pub fn set_index(&mut self, index: usize, value: u8) -> Result<(), String> {
+    pub fn set_index(&mut self, index: usize, value: u8) -> Result<(), OAuthTSLError> {
         if value as u16 >= (1 << self.status_size.as_u8()) {
-            return Err(format!(
-                "Value {} exceeds maximum for status size {:?}",
-                value, self.status_size
-            ));
+            return Err(OAuthTSLError::InvalidStatusType(value));
         }
 
         let status_list_len = self.status_list.len() * (8 / self.status_size.as_usize());
         if index >= status_list_len {
-            return Err(format!(
-                "Index {} out of bounds for status list of size {}",
-                index, status_list_len
-            ));
+            return Err(OAuthTSLError::IndexNotFound(index));
         }
 
         let mut byte = self.status_list[index * self.status_size.as_usize() / 8];
@@ -111,7 +104,7 @@ impl StatusList {
         &mut self,
         indices: Vec<usize>,
         index_input: IndexInput,
-    ) -> Result<(), String> {
+    ) -> Result<(), OAuthTSLError> {
         match index_input {
             IndexInput::Single(value) => {
                 for &index in &indices {
@@ -120,7 +113,7 @@ impl StatusList {
             }
             IndexInput::Multiple(values) => {
                 if indices.len() != values.len() {
-                    return Err("Indices and values must have the same length".to_string());
+                    return Err(OAuthTSLError::InvalidIndicesValuesPair);
                 }
                 for (i, &index) in indices.iter().enumerate() {
                     self.set_index(index, values[i])?;
@@ -133,23 +126,22 @@ impl StatusList {
     /// Compress the status list using DEFLATE [RFC1951] and ZLIB [RFC1950] data format, using the highest compression.
     /// Then it encodes the compressed status list in base64 URL-safe, no padding.
     /// Returns the output as a String
-    pub fn compress_encode(&mut self) -> Result<String, String> {
+    pub fn compress_encode(&mut self) -> Result<String, OAuthTSLError> {
         let mut compressor = ZlibEncoder::new(Vec::new(), Compression::best());
-        compressor.write_all(&self.status_list).unwrap();
-        let compressed = compressor.finish().unwrap();
+        compressor.write_all(&self.status_list)?;
+        let compressed = compressor.finish()?;
         let encoded = general_purpose::URL_SAFE_NO_PAD.encode(compressed);
 
         Ok(encoded)
     }
 
-    pub fn decode_decompress(b64: &str) -> Vec<u8> {
-        let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
-            .decode(b64)
-            .unwrap();
+    pub fn decode_decompress(b64: &str) -> Result<Vec<u8>, OAuthTSLError> {
+        let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(b64)?;
         let mut d = ZlibDecoder::new(&bytes[..]);
         let mut out = Vec::new();
-        d.read_to_end(&mut out).unwrap();
-        out
+        d.read_to_end(&mut out)?;
+
+        Ok(out)
     }
 }
 
@@ -167,18 +159,15 @@ pub enum StatusType {
 }
 
 impl TryFrom<u8> for StatusType {
-    type Error = String;
+    type Error = OAuthTSLError;
 
-    fn try_from(value: u8) -> Result<Self, String> {
+    fn try_from(value: u8) -> Result<Self, OAuthTSLError> {
         match value {
             0 => Ok(StatusType::VALID),
             1 => Ok(StatusType::INVALID),
             2 => Ok(StatusType::SUSPENDED),
             3 | 11..=15 => Ok(StatusType::UNDEFINED), // Application specific
-            _ => Err(format!(
-                "Cannot use a reserved Status Type value: {}",
-                value
-            )),
+            _ => Err(OAuthTSLError::InvalidStatusType(value)),
         }
     }
 }

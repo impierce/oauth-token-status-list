@@ -2,7 +2,7 @@ use chrono::Utc;
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 
-use crate::status_list::StatusList;
+use crate::{error::OAuthTSLError, status_list::StatusList};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatusListTokenClaims {
@@ -63,8 +63,8 @@ impl StatusListToken {
         }
     }
 
-    pub fn create_jwt(self, key: &EncodingKey) -> Result<String, String> {
-        encode(&self.header, &self.claims, key).map_err(|e| e.to_string())
+    pub fn create_jwt(self, key: &EncodingKey) -> Result<String, OAuthTSLError> {
+        Ok(encode(&self.header, &self.claims, key)?)
     }
 }
 
