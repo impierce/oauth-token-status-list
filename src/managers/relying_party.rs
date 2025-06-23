@@ -66,7 +66,7 @@ mod tests {
 
     use crate::{
         managers::relying_party::{fetch_status_list, StatusListTokenResponseType},
-        status_list_token::{StatusListToken, StatusListTokenClaims},
+        tokens::status_list_token::{StatusListToken, StatusListTokenClaims},
     };
 
     #[tokio::test]
