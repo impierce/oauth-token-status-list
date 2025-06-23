@@ -1,4 +1,4 @@
-use super::relying_party::StatusListTokenResponseType;
+use super::{error::StatusHandlerError, relying_party::StatusListTokenResponseType};
 use axum::{
     extract::State,
     http::{HeaderMap, HeaderValue, StatusCode},
@@ -9,7 +9,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use thiserror::Error;
 
 async fn status_provider_handler(
     State(provider): State<Arc<StatusProvider>>,
@@ -73,32 +72,6 @@ impl StatusProvider {
     }
 }
 
-#[derive(Debug, Error)]
-pub enum StatusHandlerError {
-    #[error("Invalid content type passed in request header")]
-    InvalidContentType,
-    #[error("Invalid status list key passed in request header")]
-    InvalidStatusListKey,
-    #[error("Internal server error")]
-    InternalError,
-}
-
-impl IntoResponse for StatusHandlerError {
-    fn into_response(self) -> Response {
-        match self {
-            StatusHandlerError::InvalidContentType => {
-                (StatusCode::BAD_REQUEST, self.to_string()).into_response()
-            }
-            StatusHandlerError::InvalidStatusListKey => {
-                (StatusCode::BAD_REQUEST, self.to_string()).into_response()
-            }
-            StatusHandlerError::InternalError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response()
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 pub mod test {
     use crate::managers::{relying_party::*, status_provider::*};
@@ -107,7 +80,7 @@ pub mod test {
     use tokio::net::TcpListener; // adjust paths as needed
 
     #[tokio::test]
-    pub async fn test_tt() {
+    pub async fn test_status_provider_handler() {
         let status_provider = StatusProvider {
             status_list_tokens: HashMap::from([("foo".to_string(), "test-jwt".to_string())]),
         };

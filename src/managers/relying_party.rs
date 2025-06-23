@@ -1,5 +1,4 @@
-use std::error::Error;
-
+use crate::managers::error::StatusHandlerError;
 use reqwest::{header, redirect::Policy, Client};
 
 /// The media types defined for status list tokens.
@@ -34,7 +33,7 @@ impl TryFrom<&str> for StatusListTokenResponseType {
 pub async fn fetch_status_list(
     uri: &str,
     accept_format: StatusListTokenResponseType,
-) -> Result<String, Box<dyn Error>> {
+) -> Result<String, StatusHandlerError> {
     // 3xx redirects should be followed, but infinite loops are caught after 5 redirects.
     let client = Client::builder()
         .redirect(Policy::limited(5)) // Allow up to 5 redirects
@@ -48,9 +47,9 @@ pub async fn fetch_status_list(
         .await?;
 
     if !res.status().is_success() {
-        return Err(Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("Unexpected status: {}", res.status()),
+        return Err(StatusHandlerError::UnexpectedError(format!(
+            "Failed to fetch status list: {}",
+            res.status()
         )));
     }
 
