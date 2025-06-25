@@ -1,7 +1,7 @@
 use super::relying_party::StatusListTokenResponseType;
 use crate::error::OAuthTSLError;
 use axum::{
-    extract::State,
+    extract::{Path, State},
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
@@ -11,14 +11,15 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 
+// status provider handler with optional path
+
 async fn status_provider_handler(
     State(provider): State<Arc<StatusProvider>>,
     headers: HeaderMap,
+    Path(status_list_key): Path<String>,
 ) -> Result<Response, OAuthTSLError> {
-    let status_list_key = headers
-        .get("x-status-list")
-        .and_then(|value| value.to_str().ok())
-        .ok_or(OAuthTSLError::InvalidStatusListKey)?;
+    println!("Received request for status list key: {}", status_list_key);
+
     let content_type = headers
         .get("content-type")
         .and_then(|content_type_value| content_type_value.to_str().ok())
@@ -28,7 +29,7 @@ async fn status_provider_handler(
 
     Ok::<Response, OAuthTSLError>(
         provider
-            .serve_status_list_token(token_type, status_list_key)
+            .serve_status_list_token(token_type, &status_list_key)
             .await,
     )
 }
@@ -66,9 +67,13 @@ impl StatusProvider {
         }
     }
 
-    pub fn create_route(&self, route_str: &str) -> Router {
+    /// Creates a route with a dynamic path segment at the end.
+    /// This path segment is to be used to extract the status list key.
+    /// This way one endpoint can serve multiple status lists.
+    pub fn create_route_with_dynamic_path(&self, route_str: &str) -> Router {
+        let route = route_str.trim_end_matches('/').to_string() + "/{path}";
         Router::new()
-            .route(route_str, get(status_provider_handler))
+            .route(&route, get(status_provider_handler))
             .with_state(Arc::new(self.clone()))
     }
 }
@@ -87,10 +92,9 @@ pub mod test {
         };
         let status_provider = Arc::new(status_provider);
 
-        let path = "/status_lists";
-
         // Set up route with handler that uses shared status_provider
-        let app = status_provider.create_route(path);
+        let path = "/status_lists";
+        let app = status_provider.create_route_with_dynamic_path(&path);
 
         // Bind to available port
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap(); // OS assigns port
@@ -103,8 +107,7 @@ pub mod test {
                 .expect("Server failed");
         });
 
-        // Now test using actual HTTP client (e.g., reqwest)
-        let uri = format!("http://{}{}", addr, path);
+        let uri = format!("http://{}{}/foo", addr, path);
 
         let res = fetch_status_list(&uri, StatusListTokenResponseType::Jwt)
             .await

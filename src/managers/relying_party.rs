@@ -42,7 +42,6 @@ pub async fn fetch_status_list(
     let res = client
         .get(uri)
         .header(header::CONTENT_TYPE, accept_format.as_str())
-        .header("X-Status-List", "foo")
         .send()
         .await?;
 
