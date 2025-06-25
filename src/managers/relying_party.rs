@@ -18,13 +18,13 @@ impl StatusListTokenResponseType {
 }
 
 impl TryFrom<&str> for StatusListTokenResponseType {
-    type Error = String;
+    type Error = OAuthTSLError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn try_from(value: &str) -> Result<Self, OAuthTSLError> {
         match value {
             "application/statuslist+jwt" => Ok(StatusListTokenResponseType::Jwt),
             "application/statuslist+cwt" => Ok(StatusListTokenResponseType::Cwt),
-            _ => Err("Unsupported response type".to_string()),
+            _ => Err(OAuthTSLError::InvalidContentType),
         }
     }
 }
