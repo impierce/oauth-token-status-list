@@ -126,7 +126,7 @@ impl StatusList {
     /// Compress the status list using DEFLATE [RFC1951] and ZLIB [RFC1950] data format, using the highest compression.
     /// Then it encodes the compressed status list in base64 URL-safe, no padding.
     /// Returns the output as a String
-    pub fn compress_encode(&mut self) -> Result<String, OAuthTSLError> {
+    pub fn compress_encode(&self) -> Result<String, OAuthTSLError> {
         let mut compressor = ZlibEncoder::new(Vec::new(), Compression::best());
         compressor.write_all(&self.status_list)?;
         let compressed = compressor.finish()?;

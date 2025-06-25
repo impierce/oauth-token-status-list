@@ -1,4 +1,6 @@
-use crate::{managers::status_provider::StatusProvider, status_list::StatusList};
+use crate::{
+    error::OAuthTSLError, managers::status_provider::StatusProvider, status_list::StatusList,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -32,7 +34,13 @@ impl Issuer {
         self.status_lists.remove(key)
     }
 
-    pub fn create_status_provider() -> StatusProvider {
-        todo!()
+    pub fn create_status_provider(&self) -> Result<StatusProvider, OAuthTSLError> {
+        let mut status_list_tokens = HashMap::new();
+
+        for (key, status_list) in &self.status_lists {
+            status_list_tokens.insert(key.clone(), status_list.compress_encode()?);
+        }
+
+        Ok(StatusProvider { status_list_tokens })
     }
 }
