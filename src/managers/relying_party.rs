@@ -1,6 +1,6 @@
 use crate::{
     error::OAuthTSLError,
-    status_list::StatusType,
+    status_list::{StatusList, StatusType},
     tokens::{
         referenced_token::{ReferencedToken, ReferencedTokenClaims},
         status_list_token::{StatusListToken, StatusListTokenClaims},
@@ -171,10 +171,9 @@ pub async fn check_referenced_token_index(
         ));
     }
 
-    let status = status_list_jwt
-        .claims
-        .status_list
-        .get_index(index as usize)?;
+    let status_list: StatusList = status_list_jwt.claims.status_list.try_into()?;
+
+    let status = status_list.get_index(index as usize)?;
     let status_type = StatusType::try_from(status)?;
 
     Ok(status_type)
@@ -218,7 +217,7 @@ mod tests {
         managers::relying_party::{
             decrypt_status_list_token, fetch_status_list, StatusListTokenResponseType,
         },
-        status_list::StatusList,
+        status_list::{EncodedStatusList, StatusList},
         tokens::status_list_token::{StatusListToken, StatusListTokenClaims},
     };
 
@@ -227,6 +226,7 @@ mod tests {
         // Create a new status list token with default values.
         let mut status_list = StatusList::default();
         status_list.set_index(4, 1).unwrap();
+        let encoded_list: EncodedStatusList = status_list.try_into().unwrap();
 
         let status_list_token = StatusListToken {
             header: Header {
@@ -239,7 +239,7 @@ mod tests {
                 iat: -1,
                 exp: None,
                 ttl: None,
-                status_list,
+                status_list: encoded_list,
             },
         };
 

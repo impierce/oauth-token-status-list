@@ -45,6 +45,58 @@ impl Bits {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct EncodedStatusList {
+    #[serde(rename = "bits")]
+    pub status_size: Bits,
+    #[serde(rename = "lst")]
+    pub status_list: String,
+    // todo: not implemented yet
+    pub aggregation_uri: Option<String>,
+}
+
+impl Default for EncodedStatusList {
+    fn default() -> Self {
+        EncodedStatusList {
+            status_size: Bits::One,
+            status_list: String::new(),
+            aggregation_uri: None,
+        }
+    }
+}
+
+impl TryFrom<StatusList> for EncodedStatusList {
+    type Error = OAuthTSLError;
+
+    fn try_from(status_list: StatusList) -> Result<Self, Self::Error> {
+        let encoded_list = status_list.compress_encode()?;
+        Ok(EncodedStatusList {
+            status_size: status_list.status_size,
+            status_list: encoded_list,
+            aggregation_uri: status_list.aggregation_uri,
+        })
+    }
+}
+
+impl EncodedStatusList {
+    pub fn new(status_size: Bits, status_list: String, aggregation_uri: Option<String>) -> Self {
+        EncodedStatusList {
+            status_size,
+            status_list,
+            aggregation_uri,
+        }
+    }
+
+    pub fn decode_decompress(&self) -> Result<Vec<u8>, OAuthTSLError> {
+        let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(&self.status_list)?;
+        let mut d = ZlibDecoder::new(&bytes[..]);
+        let mut out = Vec::new();
+        d.read_to_end(&mut out)?;
+
+        Ok(out)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StatusList {
     #[serde(rename = "bits")]
     pub status_size: Bits,
@@ -63,6 +115,19 @@ impl Default for StatusList {
             status_list: vec![0u8; 50],
             aggregation_uri: None,
         }
+    }
+}
+
+impl TryFrom<EncodedStatusList> for StatusList {
+    type Error = OAuthTSLError;
+
+    fn try_from(encoded_list: EncodedStatusList) -> Result<Self, Self::Error> {
+        let status_list = encoded_list.decode_decompress()?;
+        Ok(StatusList {
+            status_size: encoded_list.status_size,
+            status_list,
+            aggregation_uri: encoded_list.aggregation_uri,
+        })
     }
 }
 
@@ -163,15 +228,6 @@ impl StatusList {
         let encoded = general_purpose::URL_SAFE_NO_PAD.encode(compressed);
 
         Ok(encoded)
-    }
-
-    pub fn decode_decompress(b64: &str) -> Result<Vec<u8>, OAuthTSLError> {
-        let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(b64)?;
-        let mut d = ZlibDecoder::new(&bytes[..]);
-        let mut out = Vec::new();
-        d.read_to_end(&mut out)?;
-
-        Ok(out)
     }
 }
 

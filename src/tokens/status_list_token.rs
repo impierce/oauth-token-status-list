@@ -2,7 +2,7 @@ use chrono::Utc;
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 
-use crate::{error::OAuthTSLError, status_list::StatusList};
+use crate::{error::OAuthTSLError, status_list::EncodedStatusList};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StatusListTokenClaims {
@@ -12,7 +12,7 @@ pub struct StatusListTokenClaims {
     pub exp: Option<i64>,
     #[serde(default)]
     pub ttl: Option<u64>,
-    pub status_list: StatusList,
+    pub status_list: EncodedStatusList,
 }
 
 impl std::default::Default for StatusListTokenClaims {
@@ -22,7 +22,7 @@ impl std::default::Default for StatusListTokenClaims {
             iat: Utc::now().timestamp(),
             exp: None,
             ttl: None,
-            status_list: StatusList::default(),
+            status_list: EncodedStatusList::default(),
         }
     }
 }
@@ -33,7 +33,7 @@ impl StatusListTokenClaims {
         iat: i64,
         exp: Option<i64>,
         ttl: Option<u64>,
-        status_list: StatusList,
+        status_list: EncodedStatusList,
     ) -> Self {
         Self {
             sub,
