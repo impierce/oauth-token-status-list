@@ -1,4 +1,12 @@
-use crate::error::OAuthTSLError;
+use crate::{
+    error::OAuthTSLError,
+    status_list::StatusType,
+    tokens::{
+        referenced_token::{ReferencedToken, ReferencedTokenClaims},
+        status_list_token::{StatusListToken, StatusListTokenClaims},
+    },
+};
+use jsonwebtoken::{decode, decode_header, DecodingKey, Validation};
 use reqwest::{header, redirect::Policy, Client};
 
 /// The media types defined for status list tokens.
@@ -29,10 +37,95 @@ impl TryFrom<&str> for StatusListTokenResponseType {
     }
 }
 
+/// Decrypt and validate a referenced token jwt
+pub fn decrypt_referenced_token(
+    token_jwt: &str,
+    decoding_key: DecodingKey,
+) -> Result<ReferencedToken, OAuthTSLError> {
+    let alg = decode_header(token_jwt)?.alg;
+
+    // Set up validation rules for the JWT.
+    let mut validation = Validation::new(alg);
+    validation.set_required_spec_claims(&["status"]);
+    validation.validate_exp = false;
+    validation.validate_aud = false;
+
+    let token_data = decode::<ReferencedTokenClaims>(token_jwt, &decoding_key, &validation)
+        .expect("Failed to decode the referenced token JWT");
+
+    let referenced_token = ReferencedToken {
+        header: token_data.header,
+        claims: token_data.claims,
+    };
+
+    Ok(referenced_token)
+}
+
+/// Decrypt and validate the status list token JWT and return the Status List Token.
+pub fn decrypt_status_list_token(
+    status_list_jwt: &str,
+    decoding_key: DecodingKey,
+) -> Result<StatusListToken, OAuthTSLError> {
+    let alg = decode_header(status_list_jwt)?.alg;
+
+    // Set up validation rules for the JWT.
+    let mut validation = Validation::new(alg);
+    validation.set_required_spec_claims(&["sub", "iat", "status_list"]);
+    validation.validate_exp = false;
+    validation.validate_aud = false;
+
+    let token_data = decode::<StatusListTokenClaims>(status_list_jwt, &decoding_key, &validation)?;
+
+    println!("Status List Token Claims: {:?}", token_data.claims);
+
+    if token_data.claims.sub.is_empty() || token_data.claims.status_list.status_list.is_empty() {
+        return Err(OAuthTSLError::InvalidStatusListTokenClaims(format!(
+            "{:?}",
+            token_data
+        )));
+    }
+
+    let status_list_token = StatusListToken {
+        header: token_data.header,
+        claims: token_data.claims,
+    };
+
+    Ok(status_list_token)
+}
+
+/// Check and return the status of the referenced token index
+pub async fn check_referenced_token_index(
+    referenced_token: &ReferencedToken,
+    decoding_key: DecodingKey,
+) -> Result<StatusType, OAuthTSLError> {
+    let content_type = StatusListTokenResponseType::try_from(
+        referenced_token
+            .header
+            .cty
+            .clone()
+            .ok_or(OAuthTSLError::InvalidContentType)?
+            .as_str(),
+    )?;
+
+    // Get the status list from the Status Provider
+    let uri = &referenced_token.claims.status.status_list_ref.uri;
+    let index = referenced_token.claims.status.status_list_ref.idx;
+    let status_list_token = fetch_status_list(uri, content_type).await?;
+    let status_list_jwt = decrypt_status_list_token(&status_list_token, decoding_key)?;
+
+    let status = status_list_jwt
+        .claims
+        .status_list
+        .get_index(index as usize)?;
+    let status_type = StatusType::try_from(status)?;
+
+    Ok(status_type)
+}
+
 /// Sends a status list request to the provided URI and returns the JWT string.
 pub async fn fetch_status_list(
     uri: &str,
-    accept_format: StatusListTokenResponseType,
+    accept_header: StatusListTokenResponseType,
 ) -> Result<String, OAuthTSLError> {
     // 3xx redirects should be followed, but infinite loops are caught after 5 redirects.
     let client = Client::builder()
@@ -41,7 +134,7 @@ pub async fn fetch_status_list(
 
     let res = client
         .get(uri)
-        .header(header::CONTENT_TYPE, accept_format.as_str())
+        .header(header::ACCEPT, accept_header.as_str())
         .send()
         .await?;
 
@@ -64,9 +157,42 @@ mod tests {
     use wiremock::{matchers::method, Mock, MockServer, ResponseTemplate};
 
     use crate::{
-        managers::relying_party::{fetch_status_list, StatusListTokenResponseType},
+        managers::relying_party::{
+            decrypt_status_list_token, fetch_status_list, StatusListTokenResponseType,
+        },
+        status_list::StatusList,
         tokens::status_list_token::{StatusListToken, StatusListTokenClaims},
     };
+
+    #[test]
+    pub fn test_decrypt_status_list_token() {
+        // Create a new status list token with default values.
+        let mut status_list = StatusList::default();
+        status_list.set_index(4, 1).unwrap();
+
+        let status_list_token = StatusListToken {
+            header: Header {
+                alg: Algorithm::HS256,
+                typ: Some("statuslist+jwt".to_string()),
+                ..Default::default()
+            },
+            claims: StatusListTokenClaims {
+                sub: "Valid".to_string(),
+                iat: -1,
+                exp: None,
+                ttl: None,
+                status_list,
+            },
+        };
+
+        let encoding_key = EncodingKey::from_secret("secret".as_ref());
+        let jwt = status_list_token.create_jwt(&encoding_key).unwrap();
+
+        let decoding_key = DecodingKey::from_secret("secret".as_ref());
+        let decrypted_status_list_token = decrypt_status_list_token(&jwt, decoding_key).unwrap();
+
+        assert_eq!(status_list_token, decrypted_status_list_token);
+    }
 
     #[tokio::test]
     pub async fn test_fetch_status_list() {
@@ -93,7 +219,7 @@ mod tests {
         Mock::given(method("GET"))
             .respond_with(
                 ResponseTemplate::new(200)
-                    .insert_header(CONTENT_TYPE.as_str(), "application/statuslist+jwt")
+                    .insert_header(CONTENT_TYPE, "application/statuslist+jwt")
                     .set_body_string(status_list_jwt),
             )
             .mount(&mock_server)

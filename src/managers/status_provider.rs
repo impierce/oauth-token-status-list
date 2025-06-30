@@ -7,25 +7,24 @@ use axum::{
     routing::get,
     Router,
 };
+use reqwest::header;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-// status provider handler with optional path
-
+// Status Provider handler with dynamic path segment serving as the status list key
+// This allows the same endpoint to serve multiple status lists based on the key provided in the path
 async fn status_provider_handler(
     State(provider): State<Arc<StatusProvider>>,
     headers: HeaderMap,
     Path(status_list_key): Path<String>,
 ) -> Result<Response, OAuthTSLError> {
-    println!("Received request for status list key: {}", status_list_key);
-
     let content_type = headers
-        .get("content-type")
+        .get(header::ACCEPT)
         .and_then(|content_type_value| content_type_value.to_str().ok())
-        .ok_or(OAuthTSLError::InvalidContentType)?;
+        .ok_or(OAuthTSLError::InvalidAcceptHeader)?;
     let token_type = StatusListTokenResponseType::try_from(content_type)
-        .map_err(|_| OAuthTSLError::InvalidContentType)?;
+        .map_err(|_| OAuthTSLError::InvalidAcceptHeader)?;
 
     Ok::<Response, OAuthTSLError>(
         provider
@@ -52,7 +51,7 @@ impl StatusProvider {
     ) -> Response {
         let mut headers = HeaderMap::new();
         headers.insert(
-            "Content-Type",
+            header::CONTENT_TYPE,
             HeaderValue::from_static(token_type.as_str()),
         );
 
@@ -72,6 +71,7 @@ impl StatusProvider {
     /// This way one endpoint can serve multiple status lists.
     pub fn create_route_with_dynamic_path(&self, route_str: &str) -> Router {
         let route = route_str.trim_end_matches('/').to_string() + "/{path}";
+
         Router::new()
             .route(&route, get(status_provider_handler))
             .with_state(Arc::new(self.clone()))

@@ -6,23 +6,27 @@ use std::io::prelude::*;
 
 use crate::error::OAuthTSLError;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct StatusList {
-    #[serde(rename = "bits")]
-    pub status_size: Bits,
-    #[serde(rename = "lst")]
-    pub status_list: Vec<u8>,
-    // todo: not implemented yet
-    pub aggregation_uri: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub enum Bits {
     #[default]
     One = 1,
     Two = 2,
     Four = 4,
     Eight = 8,
+}
+
+impl TryFrom<u8> for Bits {
+    type Error = OAuthTSLError;
+
+    fn try_from(value: u8) -> Result<Self, OAuthTSLError> {
+        match value {
+            1 => Ok(Bits::One),
+            2 => Ok(Bits::Two),
+            4 => Ok(Bits::Four),
+            8 => Ok(Bits::Eight),
+            _ => Err(OAuthTSLError::InvalidStatusSize(value as usize)),
+        }
+    }
 }
 
 impl Bits {
@@ -36,6 +40,28 @@ impl Bits {
             Bits::Two => 2,
             Bits::Four => 4,
             Bits::Eight => 8,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StatusList {
+    #[serde(rename = "bits")]
+    pub status_size: Bits,
+    #[serde(rename = "lst")]
+    pub status_list: Vec<u8>,
+    // todo: not implemented yet
+    pub aggregation_uri: Option<String>,
+}
+/// The default Status Size is 1 bit (VALID or INVALID) and no Aggregation Uri.
+/// The default length of the status list is 50 bytes, 400 bits.
+/// This is the recommended minimum size for a status list so to encourage "herd privacy" within a Status List.
+impl Default for StatusList {
+    fn default() -> Self {
+        StatusList {
+            status_size: Bits::One,
+            status_list: vec![0u8; 50],
+            aggregation_uri: None,
         }
     }
 }
@@ -69,6 +95,9 @@ impl StatusList {
         }
     }
 
+    /// Sets the status at the specified index to the given value.
+    /// Always enlarges the status list to the required size if it is not already large enough.
+    /// Therefore an index can never be out of bounds.
     pub fn set_index(&mut self, index: usize, value: u8) -> Result<(), OAuthTSLError> {
         if value as u16 >= (1 << self.status_size.as_u8()) {
             return Err(OAuthTSLError::InvalidStatusType(value));
@@ -76,7 +105,8 @@ impl StatusList {
 
         let status_list_len = self.status_list.len() * (8 / self.status_size.as_usize());
         if index >= status_list_len {
-            return Err(OAuthTSLError::IndexNotFound(index));
+            self.status_list
+                .resize(index * (8 / self.status_size.as_usize()) + 1, 0);
         }
 
         let mut byte = self.status_list[index * self.status_size.as_usize() / 8];

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{error::OAuthTSLError, status_list::StatusList};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StatusListTokenClaims {
     pub sub: String,
     pub iat: i64,
@@ -45,7 +45,7 @@ impl StatusListTokenClaims {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StatusListToken {
     pub header: Header,
     pub claims: StatusListTokenClaims,
@@ -63,7 +63,7 @@ impl StatusListToken {
         }
     }
 
-    pub fn create_jwt(self, key: &EncodingKey) -> Result<String, OAuthTSLError> {
+    pub fn create_jwt(&self, key: &EncodingKey) -> Result<String, OAuthTSLError> {
         Ok(encode(&self.header, &self.claims, key)?)
     }
 }

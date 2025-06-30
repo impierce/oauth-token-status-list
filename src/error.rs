@@ -8,8 +8,12 @@ use thiserror::Error;
 pub enum OAuthTSLError {
     #[error("Invalid content type passed in request header")]
     InvalidContentType,
+    #[error("Invalid Accept header passed in request")]
+    InvalidAcceptHeader,
     #[error("Invalid status list key passed in request header")]
     InvalidStatusListKey,
+    #[error("Invalid status list token claims: {0}")]
+    InvalidStatusListTokenClaims(String),
     #[error("Internal server error")]
     InternalError,
     #[error("Request error (reqwest): {0}")]
@@ -20,6 +24,8 @@ pub enum OAuthTSLError {
     IndexNotFound(usize),
     #[error("Status value invalid: {0}")]
     InvalidStatusType(u8),
+    #[error("Status size invalid: {0}")]
+    InvalidStatusSize(usize),
     #[error("When setting multiple values indices and values must have the same length")]
     InvalidIndicesValuesPair,
     #[error("Error occured during standard I/O operation: {0}")]

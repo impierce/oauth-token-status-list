@@ -34,6 +34,7 @@ impl Issuer {
         self.status_lists.remove(key)
     }
 
+    /// Creates a `StatusProvider`, converting all the issuer's status lists to Status List Tokens.
     pub fn create_status_provider(&self) -> Result<StatusProvider, OAuthTSLError> {
         let mut status_list_tokens = HashMap::new();
 

@@ -5,8 +5,8 @@ use crate::error::OAuthTSLError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReferencedToken {
-    header: Header,
-    claims: ReferencedTokenClaims,
+    pub header: Header,
+    pub claims: ReferencedTokenClaims,
 }
 
 impl ReferencedToken {
@@ -29,14 +29,20 @@ impl ReferencedToken {
 
 pub struct ReferencedTokenClaims {
     pub status: Status,
-    pub sub: String,
-    pub iat: i64,
+    pub sub: Option<String>,
+    pub iat: Option<i64>,
     pub exp: Option<i64>,
     pub ttl: Option<u64>,
 }
 
 impl ReferencedTokenClaims {
-    pub fn new(sub: String, iat: i64, exp: Option<i64>, ttl: Option<u64>, status: Status) -> Self {
+    pub fn new(
+        sub: Option<String>,
+        iat: Option<i64>,
+        exp: Option<i64>,
+        ttl: Option<u64>,
+        status: Status,
+    ) -> Self {
         Self {
             sub,
             iat,
