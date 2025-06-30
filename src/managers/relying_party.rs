@@ -42,10 +42,16 @@ pub fn decrypt_referenced_token(
     token_jwt: &str,
     decoding_key: DecodingKey,
 ) -> Result<ReferencedToken, OAuthTSLError> {
-    let alg = decode_header(token_jwt)?.alg;
+    let header = decode_header(token_jwt)?;
+    if header.typ != Some("statuslist+jwt".to_string()) {
+        return Err(OAuthTSLError::InvalidHeaderTypeClaim(format!(
+            "{:?}",
+            header.typ
+        )));
+    }
 
     // Set up validation rules for the JWT.
-    let mut validation = Validation::new(alg);
+    let mut validation = Validation::new(header.alg);
     validation.set_required_spec_claims(&["status"]);
     validation.validate_exp = false;
     validation.validate_aud = false;
@@ -94,10 +100,16 @@ pub fn decrypt_status_list_token(
     status_list_jwt: &str,
     decoding_key: DecodingKey,
 ) -> Result<StatusListToken, OAuthTSLError> {
-    let alg = decode_header(status_list_jwt)?.alg;
+    let header = decode_header(status_list_jwt)?;
+    if header.typ != Some("statuslist+jwt".to_string()) {
+        return Err(OAuthTSLError::InvalidHeaderTypeClaim(format!(
+            "{:?}",
+            header.typ
+        )));
+    }
 
     // Set up validation rules for the JWT.
-    let mut validation = Validation::new(alg);
+    let mut validation = Validation::new(header.alg);
     validation.set_required_spec_claims(&["sub", "iat", "status_list"]);
     validation.validate_exp = false;
     validation.validate_aud = false;
