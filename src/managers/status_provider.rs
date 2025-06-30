@@ -2,7 +2,7 @@ use super::relying_party::StatusListTokenResponseType;
 use crate::error::OAuthTSLError;
 use axum::{
     extract::{Path, State},
-    http::{HeaderMap, HeaderValue, StatusCode},
+    http::{HeaderMap, HeaderValue, Method, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
     Router,
@@ -11,6 +11,7 @@ use reqwest::header;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+use tower_http::cors::{Any, CorsLayer};
 
 // Status Provider handler with dynamic path segment serving as the status list key
 // This allows the same endpoint to serve multiple status lists based on the key provided in the path
@@ -69,11 +70,18 @@ impl StatusProvider {
     /// Creates a route with a dynamic path segment at the end.
     /// This path segment is to be used to extract the status list key.
     /// This way one endpoint can serve multiple status lists.
+    /// This route supports CORS for GET requests.
     pub fn create_route_with_dynamic_path(&self, route_str: &str) -> Router {
         let route = route_str.trim_end_matches('/').to_string() + "/{path}";
 
+        let cors = CorsLayer::new()
+            .allow_methods([Method::GET])
+            .allow_origin(Any)
+            .allow_headers(Any); // Allow custom headers if needed
+
         Router::new()
             .route(&route, get(status_provider_handler))
+            .layer(cors)
             .with_state(Arc::new(self.clone()))
     }
 }
