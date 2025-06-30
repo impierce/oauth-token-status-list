@@ -50,8 +50,36 @@ pub fn decrypt_referenced_token(
     validation.validate_exp = false;
     validation.validate_aud = false;
 
-    let token_data = decode::<ReferencedTokenClaims>(token_jwt, &decoding_key, &validation)
-        .expect("Failed to decode the referenced token JWT");
+    let token_data = decode::<ReferencedTokenClaims>(token_jwt, &decoding_key, &validation)?;
+
+    let status_list_claim = token_data.claims.status.status_list_claim.clone();
+    let now = chrono::Utc::now().timestamp();
+
+    // Check the "issued at" (iat), "subject" (sub) and "expiration" (exp) claims.
+    if let Some(iat) = token_data.claims.iat {
+        if iat > now {
+            return Err(OAuthTSLError::InvalidReferencedTokenClaims(format!(
+                "{:?}",
+                token_data
+            )));
+        }
+    }
+
+    if let Some(exp) = token_data.claims.exp {
+        if exp < now {
+            return Err(OAuthTSLError::ExpiredReferencedToken(format!(
+                "{:?}",
+                token_data
+            )));
+        }
+    }
+
+    if status_list_claim.uri.is_empty() {
+        return Err(OAuthTSLError::InvalidReferencedTokenClaims(format!(
+            "{:?}",
+            token_data
+        )));
+    }
 
     let referenced_token = ReferencedToken {
         header: token_data.header,
@@ -76,13 +104,25 @@ pub fn decrypt_status_list_token(
 
     let token_data = decode::<StatusListTokenClaims>(status_list_jwt, &decoding_key, &validation)?;
 
-    println!("Status List Token Claims: {:?}", token_data.claims);
+    let now = chrono::Utc::now().timestamp();
 
-    if token_data.claims.sub.is_empty() || token_data.claims.status_list.status_list.is_empty() {
+    if token_data.claims.sub.is_empty()
+        || token_data.claims.status_list.status_list.is_empty()
+        || token_data.claims.iat > now
+    {
         return Err(OAuthTSLError::InvalidStatusListTokenClaims(format!(
             "{:?}",
             token_data
         )));
+    }
+
+    if let Some(exp) = token_data.claims.exp {
+        if exp < now {
+            return Err(OAuthTSLError::InvalidStatusListTokenClaims(format!(
+                "{:?}",
+                token_data
+            )));
+        }
     }
 
     let status_list_token = StatusListToken {
@@ -93,7 +133,7 @@ pub fn decrypt_status_list_token(
     Ok(status_list_token)
 }
 
-/// Check and return the status of the referenced token index
+/// Check and return the status of the Referenced Token index, while validating both Status List Token and Referenced Token.
 pub async fn check_referenced_token_index(
     referenced_token: &ReferencedToken,
     decoding_key: DecodingKey,
@@ -108,10 +148,16 @@ pub async fn check_referenced_token_index(
     )?;
 
     // Get the status list from the Status Provider
-    let uri = &referenced_token.claims.status.status_list_ref.uri;
-    let index = referenced_token.claims.status.status_list_ref.idx;
+    let uri = &referenced_token.claims.status.status_list_claim.uri;
+    let index = referenced_token.claims.status.status_list_claim.idx;
     let status_list_token = fetch_status_list(uri, content_type).await?;
     let status_list_jwt = decrypt_status_list_token(&status_list_token, decoding_key)?;
+
+    if uri != &status_list_jwt.claims.sub {
+        return Err(OAuthTSLError::InvalidStatusListTokenClaims(
+            "`sub` claim (URI) mismatch between Status List Token and Referenced Token".to_string(),
+        ));
+    }
 
     let status = status_list_jwt
         .claims

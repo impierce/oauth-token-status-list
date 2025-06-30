@@ -55,11 +55,11 @@ impl ReferencedTokenClaims {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Status {
-    pub status_list_ref: StatusListRef,
+    pub status_list_claim: StatusListClaim,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StatusListRef {
+pub struct StatusListClaim {
     pub idx: i64,
     pub uri: String,
 }

@@ -14,6 +14,12 @@ pub enum OAuthTSLError {
     InvalidStatusListKey,
     #[error("Invalid status list token claims: {0}")]
     InvalidStatusListTokenClaims(String),
+    #[error("Status List Token is expired: {0}")]
+    ExpiredStatusListToken(String),
+    #[error("Invalid referenced token claims: {0}")]
+    InvalidReferencedTokenClaims(String),
+    #[error("Referenced token is expired: {0}")]
+    ExpiredReferencedToken(String),
     #[error("Internal server error")]
     InternalError,
     #[error("Request error (reqwest): {0}")]
