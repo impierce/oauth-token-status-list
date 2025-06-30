@@ -45,6 +45,7 @@ impl StatusProvider {
         self.status_list_tokens.get(key)
     }
 
+    /// The HTTP response uses gzip Content-Encoding as defined in [RFC9110].
     pub async fn serve_status_list_token(
         &self,
         token_type: StatusListTokenResponseType,

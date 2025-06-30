@@ -5,17 +5,17 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Issuer {
+pub struct StatusIssuer {
     pub status_lists: HashMap<String, StatusList>,
 }
 
-impl Default for Issuer {
+impl Default for StatusIssuer {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Issuer {
+impl StatusIssuer {
     pub fn new() -> Self {
         Self {
             status_lists: HashMap::new(),
