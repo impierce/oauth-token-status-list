@@ -26,7 +26,7 @@ Below you will find a checklist detailing the exact coverage of the TSL spec in 
 
 This table tracks our implementation progress toward full OAuth Token Status List specification compliance.
 Keep in mind this specification list is based off the version noted at the top of this README.
-Chapters listed as **N/A** contain actionable suggestions, but these are not intended to be included in this application agnostic library. Chapters not listed at all do not contain any actionable items.
+Chapters listed as **N/A** contain actionable suggestions, but these are not intended to be included in the scope of this application agnostic library. Chapters not listed at all do not contain any actionable items.
 
 
 
