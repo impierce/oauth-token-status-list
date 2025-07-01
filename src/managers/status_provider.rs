@@ -7,10 +7,11 @@ use axum::{
     routing::get,
     Router,
 };
+use flate2::{write::GzEncoder, Compression};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::sync::Arc;
+use std::{collections::HashMap, io::Write};
 use tower_http::cors::{Any, CorsLayer};
 
 // Status Provider handler with dynamic path segment serving as the status list key
@@ -56,16 +57,30 @@ impl StatusProvider {
             header::CONTENT_TYPE,
             HeaderValue::from_static(token_type.as_str()),
         );
+        headers.insert(header::CONTENT_ENCODING, HeaderValue::from_static("gzip"));
 
-        match self.get_status_list(status_list_key) {
-            Some(jwt_token) => (StatusCode::OK, headers, jwt_token.clone()).into_response(),
-            None => (
+        let Some(jwt_token) = self.get_status_list(status_list_key) else {
+            return (
                 StatusCode::NOT_FOUND,
-                headers,
-                "JWT-Token not found".to_string(),
+                [(header::CONTENT_TYPE, HeaderValue::from_static("text/plain"))],
+                "JWT-Token not found",
             )
-                .into_response(),
-        }
+                .into_response();
+        };
+
+        let compressed = match compress_gzip(jwt_token) {
+            Ok(data) => data,
+            Err(_) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    [(header::CONTENT_TYPE, HeaderValue::from_static("text/plain"))],
+                    "Failed to compress token",
+                )
+                    .into_response();
+            }
+        };
+
+        (StatusCode::OK, headers, compressed).into_response()
     }
 
     /// Creates a route with a dynamic path segment at the end.
@@ -87,12 +102,20 @@ impl StatusProvider {
     }
 }
 
+// Helpers
+
+pub fn compress_gzip(data: &str) -> Result<Vec<u8>, std::io::Error> {
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::best());
+    encoder.write_all(data.as_bytes())?;
+    encoder.finish()
+}
+
 #[cfg(test)]
 pub mod test {
     use crate::managers::{relying_party::*, status_provider::*};
     use std::collections::HashMap;
     use std::sync::Arc;
-    use tokio::net::TcpListener; // adjust paths as needed
+    use tokio::net::TcpListener;
 
     #[tokio::test]
     pub async fn test_status_provider_handler() {
@@ -122,6 +145,8 @@ pub mod test {
             .await
             .expect("Failed to fetch status list");
 
-        assert_eq!(res, "test-jwt");
+        let decoded_body = decompress_gzip(&res).unwrap();
+
+        assert_eq!(decoded_body, "test-jwt");
     }
 }

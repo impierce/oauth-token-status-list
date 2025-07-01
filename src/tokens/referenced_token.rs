@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::OAuthTSLError;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ReferencedToken {
     pub header: Header,
     pub claims: ReferencedTokenClaims,
@@ -25,7 +25,7 @@ impl ReferencedToken {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 
 pub struct ReferencedTokenClaims {
     pub status: Status,
@@ -53,12 +53,12 @@ impl ReferencedTokenClaims {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct Status {
     pub status_list_claim: StatusListClaim,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct StatusListClaim {
     pub idx: i64,
     pub uri: String,

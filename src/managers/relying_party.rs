@@ -6,8 +6,10 @@ use crate::{
         status_list_token::{StatusListToken, StatusListTokenClaims},
     },
 };
+use flate2::read::GzDecoder;
 use jsonwebtoken::{decode, decode_header, DecodingKey, Validation};
 use reqwest::{header, redirect::Policy, Client};
+use std::io::Read;
 
 /// The media types defined for status list tokens.
 #[derive(Debug)]
@@ -162,8 +164,9 @@ pub async fn check_referenced_token_index(
     // Get the status list from the Status Provider
     let uri = &referenced_token.claims.status.status_list_claim.uri;
     let index = referenced_token.claims.status.status_list_claim.idx;
-    let status_list_token = fetch_status_list(uri, content_type).await?;
-    let status_list_jwt = decrypt_status_list_token(&status_list_token, decoding_key)?;
+    let status_list_gzip = fetch_status_list(uri, content_type).await?;
+    let status_list_jwt_string = decompress_gzip(&status_list_gzip)?;
+    let status_list_jwt = decrypt_status_list_token(&status_list_jwt_string, decoding_key)?;
 
     if uri != &status_list_jwt.claims.sub {
         return Err(OAuthTSLError::InvalidStatusListTokenClaims(
@@ -179,11 +182,11 @@ pub async fn check_referenced_token_index(
     Ok(status_type)
 }
 
-/// Sends a status list request to the provided URI and returns the JWT string.
+/// Sends a status list request to the provided URI and returns the GZIP compressed JWT string as a Vec<u8>.
 pub async fn fetch_status_list(
     uri: &str,
     accept_header: StatusListTokenResponseType,
-) -> Result<String, OAuthTSLError> {
+) -> Result<Vec<u8>, OAuthTSLError> {
     // 3xx redirects should be followed, but infinite loops are caught after 5 redirects.
     let client = Client::builder()
         .redirect(Policy::limited(5)) // Allow up to 5 redirects
@@ -202,28 +205,74 @@ pub async fn fetch_status_list(
         )));
     }
 
-    let jwt_string = res.text().await?;
+    let jwt_bytes = res.bytes().await?;
+    let jwt_vec_u8 = jwt_bytes.to_vec();
 
-    Ok(jwt_string)
+    Ok(jwt_vec_u8)
+}
+
+// Helpers
+
+pub fn decompress_gzip(data: &[u8]) -> Result<String, OAuthTSLError> {
+    let mut decoder = GzDecoder::new(data);
+    let mut decompressed_data = String::new();
+    decoder.read_to_string(&mut decompressed_data)?;
+
+    Ok(decompressed_data)
 }
 
 #[cfg(test)]
 mod tests {
-    use jsonwebtoken::{decode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+    use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header};
     use reqwest::header::CONTENT_TYPE;
     use wiremock::{matchers::method, Mock, MockServer, ResponseTemplate};
 
     use crate::{
-        managers::relying_party::{
-            decrypt_status_list_token, fetch_status_list, StatusListTokenResponseType,
+        managers::{
+            relying_party::{
+                decompress_gzip, decrypt_referenced_token, decrypt_status_list_token,
+                fetch_status_list, StatusListTokenResponseType,
+            },
+            status_provider::compress_gzip,
         },
         status_list::{EncodedStatusList, StatusList},
-        tokens::status_list_token::{StatusListToken, StatusListTokenClaims},
+        tokens::{
+            referenced_token::{ReferencedToken, ReferencedTokenClaims, Status, StatusListClaim},
+            status_list_token::{StatusListToken, StatusListTokenClaims},
+        },
     };
 
     #[test]
+    pub fn test_decrypt_referenced_token() {
+        let status_list_claim = StatusListClaim {
+            uri: "test".to_string(),
+            idx: 123,
+        };
+        let status = Status { status_list_claim };
+
+        let referenced_token = ReferencedToken {
+            header: Header {
+                alg: Algorithm::HS256,
+                typ: Some("statuslist+jwt".to_string()),
+                ..Default::default()
+            },
+            claims: ReferencedTokenClaims {
+                status,
+                ..Default::default()
+            },
+        };
+
+        let encoding_key = EncodingKey::from_secret("secret".as_ref());
+        let jwt = referenced_token.clone().create_jwt(&encoding_key).unwrap();
+
+        let decoding_key = DecodingKey::from_secret("secret".as_ref());
+        let decrypted_referenced_token = decrypt_referenced_token(&jwt, decoding_key).unwrap();
+
+        assert_eq!(referenced_token, decrypted_referenced_token);
+    }
+
+    #[test]
     pub fn test_decrypt_status_list_token() {
-        // Create a new status list token with default values.
         let mut status_list = StatusList::default();
         status_list.set_index(4, 1).unwrap();
         let encoded_list: EncodedStatusList = status_list.try_into().unwrap();
@@ -235,7 +284,7 @@ mod tests {
                 ..Default::default()
             },
             claims: StatusListTokenClaims {
-                sub: "Valid".to_string(),
+                sub: "Not empty".to_string(),
                 iat: -1,
                 exp: None,
                 ttl: None,
@@ -253,32 +302,21 @@ mod tests {
     }
 
     #[tokio::test]
+    pub async fn test_check_referenced_token() {}
+
+    #[tokio::test]
     pub async fn test_fetch_status_list() {
+        let test_str = "test";
+        let compressed = compress_gzip(test_str).unwrap();
+
         // Create a new mock server and retreive it's url.
         let mock_server = MockServer::start().await;
         let server_url = mock_server.uri();
-
-        let key = EncodingKey::from_secret("secret".as_ref());
-        let decode_key = DecodingKey::from_secret("secret".as_ref());
-
-        // Create the status list JWT as a string.
-        let status_list_jwt = StatusListToken {
-            header: Header {
-                alg: Algorithm::HS256,
-                typ: Some("statuslist+jwt".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }
-        .create_jwt(&key)
-        .unwrap();
-
-        // Create a new `request_uri` endpoint on the mock server and load it with the Status List JWT.
         Mock::given(method("GET"))
             .respond_with(
                 ResponseTemplate::new(200)
                     .insert_header(CONTENT_TYPE, "application/statuslist+jwt")
-                    .set_body_string(status_list_jwt),
+                    .set_body_bytes(compressed),
             )
             .mount(&mock_server)
             .await;
@@ -287,13 +325,8 @@ mod tests {
             .await
             .unwrap();
 
-        // Set validation rules for the JWT.
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.validate_exp = false;
-        validation.set_required_spec_claims(&["sub", "iat", "status_list"]);
+        let decompressed = decompress_gzip(&response).unwrap();
 
-        let jwt = decode::<StatusListTokenClaims>(&response, &decode_key, &validation);
-
-        assert!(jwt.is_ok(), "JWT validation failed: {:?}", jwt.err());
+        assert_eq!(test_str, decompressed);
     }
 }
