@@ -93,7 +93,7 @@ Chapters listed as **N/A** contain actionable suggestions, but these are not int
 | 12.3.               | Observability of Relying Parties: Regular re-issuance                            |     ❌      |
 | 12.4.1              | Disable the historical data feature Section 8.4                                  |     ✅      |
 | 12.4.2              | Disable the Status List Aggregation Section 9                                    |     ✅      |
-| 12.4.3              | Choose non-sequential, pseudo-random or random indices                           |     ❌      |
+| 12.4.3              | Choose non-sequential, pseudo-random or random indices                           |     ✅      |
 | 12.4.4              | Use decoy entries                                                                |     ✅      |
 | 12.4.5              | Deploy and utilize multiple Status Lists simultaneously                          |     ❌      |
 | 12.5 - 12.8         | **Unactionable Privacy Considerations**                                          |   **N/A**   |
