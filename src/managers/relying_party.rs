@@ -169,6 +169,9 @@ pub async fn check_referenced_token_index(
 
     let status_list: StatusList = status_list_jwt.claims.encoded_status_list.try_into()?;
 
+    // Here is a good place to check the length of the status_list, but how to propogate a warning?
+    // Issuers should provide "Herd Privacy" within status_lists so small lengths or even single statusses in one status_list is alarming.
+
     let status = status_list.get_index(index as usize)?;
     let status_type = StatusType::try_from(status)?;
 
