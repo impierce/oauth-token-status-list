@@ -36,17 +36,18 @@ Keep in mind this specification list is based off the version noted at the top o
 | **3.**              | Terminology                                                                      |   **N/A**   |
 | **4.**              | **Status List**                                                                  |             |
 | 4.1                 | Compressed Byte Array                                                            |     ✅      |
-| 4.1.1-3             | Set Byte Array                                                                   |     ❌      |
-| 4.1.4               | Compress Byte Array                                                              |     ❌      |
-| 4.2                 | Status List in JSON Format                                                       |     ❌      |
+| 4.1.1-3             | Set Byte Array                                                                   |     ✅      |
+| 4.1.4               | Compress Byte Array                                                              |     ✅      |
+| 4.2                 | Status List in JSON Format                                                       |     ✅      |
 | 4.2.1               | Support optional `aggregation_uri`                                               |     ❌      |
 | 4.3                 | Status List in CBOR Format                                                       |     ❌      |
 | 4.3.1               | Support optional `aggregation_uri`                                               |     ❌      |
 | **5.**              | **Status List Token**                                                            |             |
-| 5.1                 | Status List Token in JWT Format                                                  |     ❌      |
-| 5.1.0               | Support optional `exp` and `ttl`                                                 |     ❌      |
-| 5.1.2               | Secure with cryptographic signature or MAC algorithm.                            |     ❌      |
-| 5.1.3               | JWT validation                                                                   |     ❌      |
+| 5.1                 | Status List Token in JWT Format                                                  |     ✅      |
+| 5.1.0               | Support optional `exp`                                                           |     ✅      |
+| 5.1.0               | Support optional `ttl`                                                           |     ❌      |
+| 5.1.2               | Secure with cryptographic signature or MAC algorithm.                            |     ✅      |
+| 5.1.3               | JWT validation                                                                   |     ✅      |
 | 5.1.4               | Additional rules and policies of RP                                              |     ❌      |
 | 5.2.                | Status List Token in CWT Format                                                  |     ❌      |
 | 5.2.0               | Support optional `exp` and `ttl`                                                 |     ❌      |
@@ -54,30 +55,30 @@ Keep in mind this specification list is based off the version noted at the top o
 | 5.2.3               | CWT validation                                                                   |     ❌      |
 | 5.2.4               | Additional rules and policies of RP                                              |     ❌      |
 | **6.**              | **Referenced Token**                                                             |             |
-| 6.1.                | Status Claim                                                                     |     ❌      |
-| 6.2.                | Referenced Token in JOSE                                                         |     ❌      |
+| 6.1.                | Status Claim                                                                     |     ✅      |
+| 6.2.                | Referenced Token in JOSE                                                         |     ✅      |
 | 6.3.                | Referenced Token in COSE                                                         |     ❌      |
 | 6.3.1               | CWT in ISO mdoc                                                                  |     ❌      |
 | **7.**              | **Status Types**                                                                 |             |
-| 7.1.                | Status Types Values                                                              |     ❌      |
-| 7.1.1               | Support Status Type `suspended`                                                  |     ❌      |
+| 7.1.                | Status Types Values                                                              |     ✅      |
+| 7.1.1               | Support Status Type `suspended`                                                  |     ✅      |
 | **8.**              | **Verification and Processing**                                                  |             |
-| 8.1.                | Status List Request                                                              |     ❌      |
-| 8.1.0               | Support CORS and/or alternatives                                                 |     ❌      |
-| 8.1.1               | Handle GET request Accept Header                                                 |     ❌      |
-| 8.1.2               | 2xx response containing Status List                                              |     ❌      |
-| 8.1.3               | 3xx response with redirect uri                                                   |     ❌      |
-| 8.2.                | Status List Response                                                             |     ❌      |
-| 8.2.1               | Gzip Content-Encoding                                                            |     ❌      |
-| 8.3.                | Validation Rules                                                                 |     ❌      |
-| 8.3.0               | Validate Referenced Token as JWT/CWT                                             |     ❌      |
-| 8.3.1               | Validate Status Claim as per 6.2/3                                               |     ❌      |
-| 8.3.2               | Resolve Status List Token                                                        |     ❌      |
-| 8.3.3               | Validate Status List Token as JWT/CWT and 5.1/2                                  |     ❌      |
-| 8.3.4               | Check Status List Token Claims                                                   |     ❌      |
-| 8.3.5               | Decompress Status List compatible with DEFLATE and ZLIB                          |     ❌      |
-| 8.3.6               | Retrieve Status                                                                  |     ❌      |
-| 8.3.7               | Check Status                                                                     |     ❌      |
+| 8.1.                | Status List Request                                                              |     ✅      |
+| 8.1.0               | Support CORS and/or alternatives                                                 |     ✅      |
+| 8.1.1               | Handle GET request Accept Header                                                 |     ✅      |
+| 8.1.2               | 2xx response containing Status List                                              |     ✅      |
+| 8.1.3               | 3xx response with redirect uri                                                   |     ✅      |
+| 8.2.                | Status List Response                                                             |     ✅      |
+| 8.2.1               | Gzip Content-Encoding                                                            |     ✅      |
+| 8.3.                | Validation Rules                                                                 |     ✅      |
+| 8.3.0               | Validate Referenced Token as JWT/CWT                                             |     ✅      |
+| 8.3.1               | Validate Status Claim as per 6.2/3                                               |     ✅      |
+| 8.3.2               | Resolve Status List Token                                                        |     ✅      |
+| 8.3.3               | Validate Status List Token as JWT/CWT and 5.1/2                                  |     ✅      |
+| 8.3.4               | Check Status List Token Claims                                                   |     ✅      |
+| 8.3.5               | Decompress Status List compatible with DEFLATE and ZLIB                          |     ✅      |
+| 8.3.6               | Retrieve Status                                                                  |     ✅      |
+| 8.3.7               | Check Status                                                                     |     ✅      |
 | 8.4.                | Historical resolution                                                            |     ❌      |
 | 8.4.1               | Support time query parameter                                                     |     ❌      |
 | **9.**              | **Status List Aggregation**                                                      |             |
