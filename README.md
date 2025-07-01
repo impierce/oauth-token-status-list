@@ -26,14 +26,12 @@ Below you will find a checklist detailing the exact coverage of the TSL spec in 
 
 This table tracks our implementation progress toward full OAuth Token Status List specification compliance.
 Keep in mind this specification list is based off the version noted at the top of this README.
+Chapters listed as **N/A** contain actionable suggestions, but these are not intended to be included in this application agnostic library. Chapters not listed at all do not contain any actionable items.
 
 
 
 | Spec. Reference     | Feature                                                                          | Implemented |
 | ------------------- | -------------------------------------------------------------------------------- | :---------: |
-| **1.**              | Introduction                                                                     |   **N/A**   |
-| **2.**              | Conventions and Definitions                                                      |   **N/A**   |
-| **3.**              | Terminology                                                                      |   **N/A**   |
 | **4.**              | **Status List**                                                                  |             |
 | 4.1                 | Compressed Byte Array                                                            |     ✅      |
 | 4.1.1-3             | Set Byte Array                                                                   |     ✅      |
