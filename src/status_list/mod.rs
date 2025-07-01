@@ -3,6 +3,7 @@ use flate2::write::ZlibEncoder;
 use flate2::{read::ZlibDecoder, Compression};
 use serde::{Deserialize, Serialize};
 use std::io::prelude::*;
+use ts_rs::TS;
 
 use crate::error::OAuthTSLError;
 
@@ -232,7 +233,7 @@ impl StatusList {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
 pub enum StatusType {
     VALID = 0,
     INVALID = 1,

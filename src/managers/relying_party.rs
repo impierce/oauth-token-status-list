@@ -67,8 +67,7 @@ pub fn decrypt_referenced_token_jwt(
     if let Some(iat) = token_data.claims.iat {
         if iat > now {
             return Err(OAuthTSLError::InvalidReferencedTokenClaims(format!(
-                "{:?}",
-                token_data
+                "{token_data:?}"
             )));
         }
     }
@@ -76,16 +75,14 @@ pub fn decrypt_referenced_token_jwt(
     if let Some(exp) = token_data.claims.exp {
         if exp < now {
             return Err(OAuthTSLError::ExpiredReferencedToken(format!(
-                "{:?}",
-                token_data
+                "{token_data:?}"
             )));
         }
     }
 
     if status_list_claim.uri.is_empty() {
         return Err(OAuthTSLError::InvalidReferencedTokenClaims(format!(
-            "{:?}",
-            token_data
+            "{token_data:?}"
         )));
     }
 
@@ -125,16 +122,14 @@ pub fn decrypt_status_list_token(
         || token_data.claims.iat > now
     {
         return Err(OAuthTSLError::InvalidStatusListTokenClaims(format!(
-            "{:?}",
-            token_data
+            "{token_data:?}"
         )));
     }
 
     if let Some(exp) = token_data.claims.exp {
         if exp < now {
             return Err(OAuthTSLError::InvalidStatusListTokenClaims(format!(
-                "{:?}",
-                token_data
+                "{token_data:?}"
             )));
         }
     }
