@@ -89,16 +89,14 @@ Keep in mind this specification list is based off the version noted at the top o
 | 10.1.               | Extended Key Usage Extension                                                     |     ❌      |
 | **11.**             | **Security Considerations**                                                      |   **N/A**   |
 | **12.**             | **Privacy Considerations**                                                       |             |
-| 12.1.               | Observability of Issuers                                                         |     ❌      |
+| 12.1.1              | Herd Privacy                                                                     |     ✅      |
+| 12.1.2              | Hide Relying Party (Sender)                                                      |     ❌      |
 | 12.2.               | Malicious Issuers                                                                |     ❌      |
-| 12.3.               | Observability of Relying Parties                                                 |     ❌      |
-| 12.4.               | Observability of Outsiders                                                       |     ❌      |
-| 12.5.               | Unlinkability                                                                    |     ❌      |
-| 12.5.1.             | Colluding Relying Parties                                                        |     ❌      |
-| 12.5.2.             | Colluding Status Issuer and Relying Party                                        |     ❌      |
-| 12.6.               | External Status Provider for Privacy                                             |     ❌      |
-| 12.7.               | Historical Resolution                                                            |     ❌      |
-| 12.8.               | Status Types                                                                     |     ❌      |
-| **13.**             | **Implementation Considerations**                                                |             |
-| **14.**             | **IANA Considerations**                                                          |   **N/A**   |
-
+| 12.3.               | Observability of Relying Parties: Regular re-issuance                            |     ❌      |
+| 12.4.1              | Disable the historical data feature Section 8.4                                  |     ✅      |
+| 12.4.2              | Disable the Status List Aggregation Section 9                                    |     ✅      |
+| 12.4.3              | Choose non-sequential, pseudo-random or random indices                           |     ❌      |
+| 12.4.4              | Use decoy entries                                                                |     ✅      |
+| 12.4.5              | Deploy and utilize multiple Status Lists simultaneously                          |     ❌      |
+| 12.5 - 12.8         | **Unactionable Privacy Considerations**                                          |   **N/A**   |
+| **13.**             | **Implementation Considerations**                                                |   **N/A**   |
