@@ -3,7 +3,7 @@ use crate::{
     status_list::{StatusList, StatusType},
     tokens::{
         referenced_token::{ReferencedToken, ReferencedTokenClaims},
-        status_list_token::{StatusListToken, StatusListTokenClaims},
+        status_list_token::{StatusListToken, StatusListTokenClaims, StatusListTyp},
     },
 };
 use flate2::read::GzDecoder;
@@ -40,12 +40,12 @@ impl TryFrom<&str> for StatusListTokenResponseType {
 }
 
 /// Decrypt and validate a referenced token jwt
-pub fn decrypt_referenced_token(
+pub fn decrypt_referenced_token_jwt(
     token_jwt: &str,
     decoding_key: DecodingKey,
 ) -> Result<ReferencedToken, OAuthTSLError> {
     let header = decode_header(token_jwt)?;
-    if header.typ != Some("statuslist+jwt".to_string()) {
+    if header.typ != Some(StatusListTyp::Jwt.as_string()) {
         return Err(OAuthTSLError::InvalidHeaderTypeClaim(format!(
             "{:?}",
             header.typ
@@ -103,7 +103,7 @@ pub fn decrypt_status_list_token(
     decoding_key: DecodingKey,
 ) -> Result<StatusListToken, OAuthTSLError> {
     let header = decode_header(status_list_jwt)?;
-    if header.typ != Some("statuslist+jwt".to_string()) {
+    if header.typ != Some(StatusListTyp::Jwt.as_string()) {
         return Err(OAuthTSLError::InvalidHeaderTypeClaim(format!(
             "{:?}",
             header.typ
@@ -121,7 +121,7 @@ pub fn decrypt_status_list_token(
     let now = chrono::Utc::now().timestamp();
 
     if token_data.claims.sub.is_empty()
-        || token_data.claims.status_list.status_list.is_empty()
+        || token_data.claims.encoded_status_list.status_list.is_empty()
         || token_data.claims.iat > now
     {
         return Err(OAuthTSLError::InvalidStatusListTokenClaims(format!(
@@ -152,19 +152,12 @@ pub async fn check_referenced_token_index(
     referenced_token: &ReferencedToken,
     decoding_key: DecodingKey,
 ) -> Result<StatusType, OAuthTSLError> {
-    let content_type = StatusListTokenResponseType::try_from(
-        referenced_token
-            .header
-            .cty
-            .clone()
-            .ok_or(OAuthTSLError::InvalidContentType)?
-            .as_str(),
-    )?;
-
     // Get the status list from the Status Provider
     let uri = &referenced_token.claims.status.status_list_claim.uri;
     let index = referenced_token.claims.status.status_list_claim.idx;
-    let status_list_gzip = fetch_status_list(uri, content_type).await?;
+
+    // TODO: currently the Accept Header is hardcoded to only accept JWT since this library only implements JWT.
+    let status_list_gzip = fetch_status_list(uri, StatusListTokenResponseType::Jwt).await?;
     let status_list_jwt_string = decompress_gzip(&status_list_gzip)?;
     let status_list_jwt = decrypt_status_list_token(&status_list_jwt_string, decoding_key)?;
 
@@ -174,7 +167,7 @@ pub async fn check_referenced_token_index(
         ));
     }
 
-    let status_list: StatusList = status_list_jwt.claims.status_list.try_into()?;
+    let status_list: StatusList = status_list_jwt.claims.encoded_status_list.try_into()?;
 
     let status = status_list.get_index(index as usize)?;
     let status_type = StatusType::try_from(status)?;
@@ -230,15 +223,15 @@ mod tests {
     use crate::{
         managers::{
             relying_party::{
-                decompress_gzip, decrypt_referenced_token, decrypt_status_list_token,
-                fetch_status_list, StatusListTokenResponseType,
+                check_referenced_token_index, decompress_gzip, decrypt_referenced_token_jwt,
+                decrypt_status_list_token, fetch_status_list, StatusListTokenResponseType,
             },
             status_provider::compress_gzip,
         },
-        status_list::{EncodedStatusList, StatusList},
+        status_list::{EncodedStatusList, StatusList, StatusType},
         tokens::{
             referenced_token::{ReferencedToken, ReferencedTokenClaims, Status, StatusListClaim},
-            status_list_token::{StatusListToken, StatusListTokenClaims},
+            status_list_token::{StatusListToken, StatusListTokenClaims, StatusListTyp},
         },
     };
 
@@ -253,7 +246,7 @@ mod tests {
         let referenced_token = ReferencedToken {
             header: Header {
                 alg: Algorithm::HS256,
-                typ: Some("statuslist+jwt".to_string()),
+                typ: Some(StatusListTyp::Jwt.as_string()),
                 ..Default::default()
             },
             claims: ReferencedTokenClaims {
@@ -266,7 +259,7 @@ mod tests {
         let jwt = referenced_token.clone().create_jwt(&encoding_key).unwrap();
 
         let decoding_key = DecodingKey::from_secret("secret".as_ref());
-        let decrypted_referenced_token = decrypt_referenced_token(&jwt, decoding_key).unwrap();
+        let decrypted_referenced_token = decrypt_referenced_token_jwt(&jwt, decoding_key).unwrap();
 
         assert_eq!(referenced_token, decrypted_referenced_token);
     }
@@ -280,7 +273,7 @@ mod tests {
         let status_list_token = StatusListToken {
             header: Header {
                 alg: Algorithm::HS256,
-                typ: Some("statuslist+jwt".to_string()),
+                typ: Some(StatusListTyp::Jwt.as_string()),
                 ..Default::default()
             },
             claims: StatusListTokenClaims {
@@ -288,7 +281,7 @@ mod tests {
                 iat: -1,
                 exp: None,
                 ttl: None,
-                status_list: encoded_list,
+                encoded_status_list: encoded_list,
             },
         };
 
@@ -302,7 +295,60 @@ mod tests {
     }
 
     #[tokio::test]
-    pub async fn test_check_referenced_token() {}
+    pub async fn test_check_referenced_token() {
+        let encoding_key = EncodingKey::from_secret("secret".as_ref());
+        let decoding_key = DecodingKey::from_secret("secret".as_ref());
+
+        // Create a new mock server, retrieve it's url
+        let mock_server = MockServer::start().await;
+        let server_url = mock_server.uri();
+
+        // Create Status List Token
+        let mut status_list = StatusList::default();
+        status_list
+            .set_index(123, StatusType::INVALID as u8)
+            .unwrap();
+        let encoded_status_list = EncodedStatusList::try_from(status_list).unwrap();
+        let claims =
+            StatusListTokenClaims::new(server_url.clone(), -1, None, None, encoded_status_list);
+        let status_list_token = StatusListToken::new(Algorithm::HS256, claims);
+        let status_list_token_jwt = status_list_token.create_jwt(&encoding_key).unwrap();
+        let compressed_jwt = compress_gzip(&status_list_token_jwt).unwrap();
+
+        // Host the Status List Token.
+        Mock::given(method("GET"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .insert_header(CONTENT_TYPE, "application/statuslist+jwt")
+                    .set_body_bytes(compressed_jwt),
+            )
+            .mount(&mock_server)
+            .await;
+
+        // Create the Referenced Token
+        let status_list_claim = StatusListClaim {
+            uri: server_url,
+            idx: 123,
+        };
+        let status = Status { status_list_claim };
+
+        let referenced_token = ReferencedToken {
+            header: Header {
+                alg: Algorithm::HS256,
+                ..Default::default()
+            },
+            claims: ReferencedTokenClaims {
+                status,
+                ..Default::default()
+            },
+        };
+
+        let status_type = check_referenced_token_index(&referenced_token, decoding_key)
+            .await
+            .unwrap();
+
+        assert_eq!(status_type, StatusType::INVALID);
+    }
 
     #[tokio::test]
     pub async fn test_fetch_status_list() {

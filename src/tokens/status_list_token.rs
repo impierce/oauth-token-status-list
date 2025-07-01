@@ -12,7 +12,7 @@ pub struct StatusListTokenClaims {
     pub exp: Option<i64>,
     #[serde(default)]
     pub ttl: Option<u64>,
-    pub status_list: EncodedStatusList,
+    pub encoded_status_list: EncodedStatusList,
 }
 
 impl std::default::Default for StatusListTokenClaims {
@@ -22,7 +22,7 @@ impl std::default::Default for StatusListTokenClaims {
             iat: Utc::now().timestamp(),
             exp: None,
             ttl: None,
-            status_list: EncodedStatusList::default(),
+            encoded_status_list: EncodedStatusList::default(),
         }
     }
 }
@@ -40,7 +40,7 @@ impl StatusListTokenClaims {
             iat,
             exp,
             ttl,
-            status_list,
+            encoded_status_list: status_list,
         }
     }
 }
@@ -56,7 +56,7 @@ impl StatusListToken {
         Self {
             header: Header {
                 alg,
-                typ: Some("statuslist+jwt".to_string()),
+                typ: Some(StatusListTyp::Jwt.as_string()),
                 ..Default::default()
             },
             claims,
@@ -74,10 +74,43 @@ impl std::default::Default for StatusListToken {
         Self {
             header: Header {
                 alg: Algorithm::ES256,
-                typ: Some("statuslist+jwt".to_string()),
+                typ: Some(StatusListTyp::Jwt.as_string()),
                 ..Default::default()
             },
             claims: StatusListTokenClaims::default(),
+        }
+    }
+}
+
+pub enum StatusListTyp {
+    Jwt,
+    Cwt,
+}
+
+impl StatusListTyp {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            StatusListTyp::Jwt => "statuslist+jwt",
+            StatusListTyp::Cwt => "statuslist+cwt",
+        }
+    }
+
+    pub fn as_string(&self) -> String {
+        match self {
+            StatusListTyp::Jwt => "statuslist+jwt".to_string(),
+            StatusListTyp::Cwt => "statuslist+cwt".to_string(),
+        }
+    }
+}
+
+impl TryFrom<&str> for StatusListTyp {
+    type Error = OAuthTSLError;
+
+    fn try_from(value: &str) -> Result<Self, OAuthTSLError> {
+        match value {
+            "statuslist+jwt" => Ok(StatusListTyp::Jwt),
+            "statuslist+cwt" => Ok(StatusListTyp::Cwt),
+            _ => Err(OAuthTSLError::InvalidContentType),
         }
     }
 }

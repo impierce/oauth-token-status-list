@@ -105,6 +105,7 @@ pub struct StatusList {
     // todo: not implemented yet
     pub aggregation_uri: Option<String>,
 }
+
 /// The default Status Size is 1 bit (VALID or INVALID) and no Aggregation Uri.
 /// The default length of the status list is 50 bytes, 400 bits.
 /// This is the recommended minimum size for a status list so to encourage "herd privacy" within a Status List.
@@ -231,7 +232,7 @@ impl StatusList {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum StatusType {
     VALID = 0,
     INVALID = 1,
