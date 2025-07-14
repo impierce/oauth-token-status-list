@@ -947,7 +947,7 @@ dependencies = [
  "rand",
  "reqwest",
  "serde",
- "thiserror 2.0.12",
+ "thiserror 1.0.69",
  "tokio",
  "tower-http",
  "ts-rs",

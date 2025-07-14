@@ -24,7 +24,7 @@ jsonwebtoken = "9.3"
 rand = "0.9.1"
 reqwest = "0.12"
 serde = { version = "1.0", features = ["derive"] }
-thiserror = "2"
+thiserror = "1.0"
 tokio = "1"
 tower-http = { version = "0.6", features = ["cors"] }
 ts-rs = "7.0"
