@@ -233,6 +233,7 @@ impl StatusList {
     }
 }
 
+// TODO: support adding custom status types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
 pub enum StatusType {
     VALID = 0,
