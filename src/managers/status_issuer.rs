@@ -62,7 +62,7 @@ impl MetaStatusList {
 
     /// Sets the status at a random index to the given value.
     /// Always enlarges the status list to the required size if it is not already large enough.
-    pub fn set_random_index(&mut self, value: u8) -> Result<(), OAuthTSLError> {
+    pub fn set_random_index(&mut self, value: u8) -> Result<usize, OAuthTSLError> {
         let mut size =
             self.status_list.status_list.len() * (8 / self.status_list.status_size.as_usize());
 
@@ -87,7 +87,7 @@ impl MetaStatusList {
             self.used_indices.push(index);
         }
 
-        Ok(())
+        Ok(index)
     }
 
     /// Uses an enum to allow single or multiple input values, enabling setting all indices to one value or setting a value per index.
