@@ -234,8 +234,9 @@ impl StatusList {
 }
 
 // TODO: support adding custom status types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS, Default)]
 pub enum StatusType {
+    #[default]
     VALID = 0,
     INVALID = 1,
     SUSPENDED = 2,
