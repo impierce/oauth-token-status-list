@@ -262,6 +262,20 @@ impl TryFrom<u8> for StatusType {
     }
 }
 
+impl TryInto<u8> for StatusType {
+    type Error = OAuthTSLError;
+
+    fn try_into(self) -> Result<u8, Self::Error> {
+        match self {
+            StatusType::VALID => Ok(0),
+            StatusType::INVALID => Ok(1),
+            StatusType::SUSPENDED => Ok(2),
+            StatusType::UNDEFINED => Ok(3), // Application specific
+            _ => Err(OAuthTSLError::InvalidStatusType(self as u8)),
+        }
+    }
+}
+
 // Helpers
 #[derive(Debug, Clone)]
 pub enum IndexInput {
