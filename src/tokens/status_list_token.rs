@@ -12,6 +12,7 @@ pub struct StatusListTokenClaims {
     pub exp: Option<i64>,
     #[serde(default)]
     pub ttl: Option<u64>,
+    #[serde(rename = "status_list")]
     pub encoded_status_list: EncodedStatusList,
 }
 
