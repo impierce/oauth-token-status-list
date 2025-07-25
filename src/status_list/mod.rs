@@ -48,7 +48,7 @@ impl Bits {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct EncodedStatusList {
     #[serde(rename = "bits")]
-    pub status_size: Bits,
+    pub status_size: u8,
     #[serde(rename = "lst")]
     pub status_list: String,
     // todo: not implemented yet
@@ -58,7 +58,7 @@ pub struct EncodedStatusList {
 impl Default for EncodedStatusList {
     fn default() -> Self {
         EncodedStatusList {
-            status_size: Bits::One,
+            status_size: Bits::Two.as_u8(),
             status_list: String::new(),
             aggregation_uri: None,
         }
@@ -71,7 +71,7 @@ impl TryFrom<StatusList> for EncodedStatusList {
     fn try_from(status_list: StatusList) -> Result<Self, Self::Error> {
         let encoded_list = status_list.compress_encode()?;
         Ok(EncodedStatusList {
-            status_size: status_list.status_size,
+            status_size: status_list.status_size.as_u8(),
             status_list: encoded_list,
             aggregation_uri: status_list.aggregation_uri,
         })
@@ -81,7 +81,7 @@ impl TryFrom<StatusList> for EncodedStatusList {
 impl EncodedStatusList {
     pub fn new(status_size: Bits, status_list: String, aggregation_uri: Option<String>) -> Self {
         EncodedStatusList {
-            status_size,
+            status_size: status_size.as_u8(),
             status_list,
             aggregation_uri,
         }
@@ -126,7 +126,7 @@ impl TryFrom<EncodedStatusList> for StatusList {
     fn try_from(encoded_list: EncodedStatusList) -> Result<Self, Self::Error> {
         let status_list = encoded_list.decode_decompress()?;
         Ok(StatusList {
-            status_size: encoded_list.status_size,
+            status_size: Bits::try_from(encoded_list.status_size)?,
             status_list,
             aggregation_uri: encoded_list.aggregation_uri,
         })
