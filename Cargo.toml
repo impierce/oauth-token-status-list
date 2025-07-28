@@ -1,0 +1,31 @@
+[package]
+name = "oauth_tsl"
+version = "0.1.0"
+edition = "2021"
+description = "Rust implementation of the OAuth Token Status List specification by IETF."
+homepage = "https://www.impierce.com/"
+keywords = ["revocation", "status", "list"]
+license = "Apache-2.0"
+repository = "https://github.com/impierce/oauth-token-status-list"
+
+[workspace.package]
+homepage = "https://www.impierce.com/"
+license = "Apache-2.0"
+repository = "https://github.com/impierce/oauth-token-status-list"
+
+[workspace.dependencies]
+
+[dependencies]
+axum = { version = "0.8" }
+base64 = "0.22"
+chrono = "0.4"
+flate2 = { version = "1.0", default-features = false, features = ["zlib"] }
+jsonwebtoken = "9.3"
+rand = "0.9.1"
+reqwest = "0.12"
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+tokio = "1"
+tower-http = { version = "0.6", features = ["cors"] }
+ts-rs = "7.0"
+wiremock = "0.6"
