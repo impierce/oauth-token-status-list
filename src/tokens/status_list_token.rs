@@ -1,6 +1,8 @@
 use chrono::Utc;
+use flate2::{write::GzEncoder, Compression};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
+use std::io::Write;
 
 use crate::{error::OAuthTSLError, status_list::EncodedStatusList};
 
@@ -114,6 +116,14 @@ impl TryFrom<&str> for StatusListTyp {
             _ => Err(OAuthTSLError::InvalidContentType),
         }
     }
+}
+
+// Helpers
+
+pub fn compress_gzip(data: &str) -> Result<Vec<u8>, std::io::Error> {
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::best());
+    encoder.write_all(data.as_bytes())?;
+    encoder.finish()
 }
 
 #[cfg(test)]

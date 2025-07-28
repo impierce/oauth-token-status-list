@@ -1,7 +1,3 @@
-use axum::{
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -24,8 +20,6 @@ pub enum OAuthTSLError {
     ExpiredReferencedToken(String),
     #[error("Internal server error")]
     InternalError,
-    #[error("Request error (reqwest): {0}")]
-    RequestError(#[from] reqwest::Error),
     #[error("An unexpected error occurred: {0}")]
     UnexpectedError(String),
     #[error("Status List index, {0}, not found")]
@@ -42,28 +36,4 @@ pub enum OAuthTSLError {
     Base64DecodeError(#[from] base64::DecodeError),
     #[error("Unable to create JWT: {0}")]
     CreateJwtError(#[from] jsonwebtoken::errors::Error),
-}
-
-impl IntoResponse for OAuthTSLError {
-    fn into_response(self) -> Response {
-        match self {
-            OAuthTSLError::InvalidContentType => {
-                (StatusCode::BAD_REQUEST, self.to_string()).into_response()
-            }
-            OAuthTSLError::InvalidStatusListKey => {
-                (StatusCode::BAD_REQUEST, self.to_string()).into_response()
-            }
-            OAuthTSLError::InternalError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response()
-            }
-            OAuthTSLError::RequestError(_) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response()
-            }
-            OAuthTSLError::UnexpectedError(msg) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, msg).into_response()
-            }
-            // Not all errors will have nor need a specific status code and Response type.
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response(),
-        }
-    }
 }
