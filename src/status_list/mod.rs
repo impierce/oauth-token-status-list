@@ -134,6 +134,44 @@ impl TryFrom<EncodedStatusList> for StatusList {
 }
 
 impl StatusList {
+    /// Takes a Vec of Statuses, each represented by a u8 and packs them into a byte according to the status size.
+    /// A status size of 8 bits would therefore need no packing.
+    /// A status size of 1 bit would pack 8 statuses into a single byte.
+    pub fn pack_statuses_into_bytes(
+        &mut self,
+        statuses: Vec<StatusType>,
+    ) -> Result<Vec<u8>, OAuthTSLError> {
+        let status_size_usize = self.status_size.as_usize();
+        let statuses_per_byte = 8 / status_size_usize;
+        let mut packed: Vec<u8> = Vec::with_capacity(statuses.len().div_ceil(statuses_per_byte));
+        let mut byte: u8 = 0;
+        let mut bit_pos = 0;
+
+        for status in statuses.iter().cloned() {
+            if status.clone() as usize >= (1 << status_size_usize) {
+                return Err(OAuthTSLError::InvalidStatusType(status as u8));
+            }
+
+            byte |= (status as u8) << bit_pos;
+            bit_pos += status_size_usize;
+
+            if bit_pos >= 8 {
+                packed.push(byte);
+                byte = 0;
+                bit_pos = 0;
+            }
+        }
+
+        // Flush the last byte
+        if bit_pos > 0 {
+            packed.push(byte);
+        }
+
+        self.status_list = packed.clone();
+
+        Ok(packed)
+    }
+
     pub fn get_index(&self, index: usize) -> Result<u8, OAuthTSLError> {
         let status_list_len = self.status_list.len() * (8 / self.status_size.as_usize());
         if index >= status_list_len {
@@ -286,6 +324,61 @@ pub enum IndexInput {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    pub fn test_pack_statuses_into_bytes_1_byte() {
+        let mut status_list = StatusList {
+            status_size: Bits::Two,
+            status_list: vec![0u8; 2],
+            ..Default::default()
+        };
+
+        let statuses = vec![
+            StatusType::VALID,     // 0b00 packing the statuses from right to left
+            StatusType::INVALID,   // 0b0100
+            StatusType::SUSPENDED, // 0b100100
+            StatusType::UNDEFINED, // 0b11100100
+        ];
+
+        status_list.pack_statuses_into_bytes(statuses).unwrap();
+
+        assert_eq!(status_list.status_list, vec![0b11100100]);
+    }
+
+    #[test]
+    pub fn test_pack_statuses_into_bytes_8_bytes() {
+        let mut status_list = StatusList {
+            status_size: Bits::Two,
+            status_list: vec![0u8; 8],
+            ..Default::default()
+        };
+
+        let statuses = vec![
+            StatusType::VALID,     // 0b00 packing the statuses from right to left
+            StatusType::INVALID,   // 0b0100
+            StatusType::SUSPENDED, // 0b100100
+            StatusType::UNDEFINED, // 0b11100100 --> Byte 1
+            StatusType::VALID,     // 0b00
+            StatusType::VALID,     // 0b0000
+            StatusType::VALID,     // 0b000000
+            StatusType::VALID,     // 0b00000000 --> Byte 2
+            StatusType::UNDEFINED, // 0b11
+            StatusType::SUSPENDED, // 0b1011
+            StatusType::INVALID,   // 0b011011
+            StatusType::VALID,     // 0b00011011 --> Byte 3
+            StatusType::UNDEFINED, // 0b11
+            StatusType::INVALID,   // 0b0111
+            StatusType::VALID,     // 0b000111
+            StatusType::SUSPENDED, // 0b10000111 --> Byte 4
+        ];
+
+        status_list.pack_statuses_into_bytes(statuses).unwrap();
+
+        assert_eq!(
+            status_list.status_list,
+            vec![0b11100100, 0b00000000, 0b00011011, 0b10000111]
+        );
+    }
 
     /// Example 1 from appendix "Test vectors for Status List encoding" of the specification.
     /// This fn tests 3 functions; set_index, get_index, compress_encode
