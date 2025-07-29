@@ -4,8 +4,8 @@ use thiserror::Error;
 pub enum OAuthTSLError {
     #[error("Invalid content type passed in request header")]
     InvalidContentType,
-    #[error("Invalid type claim (`typ`) in jwt header: {0}")]
-    InvalidHeaderTypeClaim(String),
+    #[error("Invalid type claim (`typ`) in jwt header: {0:?}")]
+    InvalidHeaderTypeClaim(Option<String>),
     #[error("Invalid Accept header passed in request")]
     InvalidAcceptHeader,
     #[error("Invalid status list key passed in request header")]

@@ -55,10 +55,7 @@ pub fn decrypt_referenced_token_jwt(
 ) -> Result<ReferencedToken, OAuthTSLError> {
     let header = decode_header(token_jwt)?;
     if header.typ != Some(StatusListTyp::Jwt.to_string()) {
-        return Err(OAuthTSLError::InvalidHeaderTypeClaim(format!(
-            "{:?}",
-            header.typ
-        )));
+        return Err(OAuthTSLError::InvalidHeaderTypeClaim(header.typ));
     }
 
     // Set up validation rules for the JWT.
@@ -110,10 +107,7 @@ pub fn decrypt_status_list_token(
 ) -> Result<StatusListToken, OAuthTSLError> {
     let header = decode_header(status_list_jwt)?;
     if header.typ != Some(StatusListTyp::Jwt.to_string()) {
-        return Err(OAuthTSLError::InvalidHeaderTypeClaim(format!(
-            "{:?}",
-            header.typ
-        )));
+        return Err(OAuthTSLError::InvalidHeaderTypeClaim(header.typ));
     }
 
     // Set up validation rules for the JWT.
