@@ -88,7 +88,8 @@ pub struct StatusList {
     pub status_size: Bits,
     #[serde(rename = "lst")]
     pub status_list: Vec<u8>,
-    // todo: not implemented yet
+    // Aggregation URI is not implemented yet.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub aggregation_uri: Option<String>,
 }
 
@@ -132,8 +133,8 @@ impl StatusList {
         let mut byte: u8 = 0;
         let mut bit_pos = 0;
 
-        for status in statuses.iter().cloned() {
-            if status.clone() as usize >= (1 << status_size_usize) {
+        for status in statuses.into_iter() {
+            if status as usize >= (1 << status_size_usize) {
                 return Err(OAuthTSLError::InvalidStatusType(status as u8));
             }
 
@@ -257,7 +258,7 @@ impl StatusList {
 }
 
 // TODO: support adding custom status types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS, Default, Copy)]
 pub enum StatusType {
     #[default]
     VALID = 0,

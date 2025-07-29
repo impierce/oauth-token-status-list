@@ -68,7 +68,6 @@ pub fn decrypt_referenced_token_jwt(
 
     let token_data = decode::<ReferencedTokenClaims>(token_jwt, &decoding_key, &validation)?;
 
-    let status_list_claim = &token_data.claims.status.status_list_claim;
     let now = chrono::Utc::now().timestamp();
 
     // Check the "issued at" (iat), "subject" (sub) and "expiration" (exp) claims.
@@ -86,12 +85,6 @@ pub fn decrypt_referenced_token_jwt(
                 "{token_data:?}"
             )));
         }
-    }
-
-    if status_list_claim.uri.is_empty() {
-        return Err(OAuthTSLError::InvalidReferencedTokenClaims(format!(
-            "{token_data:?}"
-        )));
     }
 
     let referenced_token = ReferencedToken {
@@ -173,8 +166,8 @@ mod tests {
     #[test]
     pub fn test_decrypt_referenced_token() {
         let status_list_claim = StatusListClaim {
-            uri: "test".to_string(),
             idx: 123,
+            ..Default::default()
         };
         let status = Status { status_list_claim };
 

@@ -16,3 +16,4 @@ jsonwebtoken = "9.3"
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
 ts-rs = "7.0"
+url = {version = "2.5", features = ["serde"]}

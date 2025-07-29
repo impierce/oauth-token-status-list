@@ -13,9 +13,9 @@ use crate::{
 pub struct StatusListTokenClaims {
     pub sub: String,
     pub iat: i64,
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub exp: Option<i64>,
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ttl: Option<u64>,
     #[serde(rename = "status_list")]
     pub encoded_status_list: EncodedStatusList,

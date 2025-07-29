@@ -1,5 +1,6 @@
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 use crate::error::OAuthTSLError;
 
@@ -26,12 +27,15 @@ impl ReferencedToken {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
-
 pub struct ReferencedTokenClaims {
     pub status: Status,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sub: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub iat: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub exp: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ttl: Option<u64>,
 }
 
@@ -58,8 +62,17 @@ pub struct Status {
     pub status_list_claim: StatusListClaim,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StatusListClaim {
     pub idx: i64,
-    pub uri: String,
+    pub uri: Url,
+}
+
+impl Default for StatusListClaim {
+    fn default() -> Self {
+        StatusListClaim {
+            idx: 0,
+            uri: Url::parse("https://example.com/default").unwrap(),
+        }
+    }
 }
