@@ -8,7 +8,7 @@ use crate::{
 use flate2::read::GzDecoder;
 use jsonwebtoken::{decode, decode_header, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
-use std::io::Read;
+use std::{fmt, io::Read};
 
 /// The media types defined for status list tokens.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -26,12 +26,13 @@ impl From<StatusListTyp> for StatusListTokenResponseType {
     }
 }
 
-impl StatusListTokenResponseType {
-    pub fn as_str(&self) -> &'static str {
-        match self {
+impl fmt::Display for StatusListTokenResponseType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
             StatusListTokenResponseType::Jwt => "application/statuslist+jwt",
             StatusListTokenResponseType::Cwt => "application/statuslist+cwt",
-        }
+        };
+        write!(f, "{s}")
     }
 }
 
@@ -53,7 +54,7 @@ pub fn decrypt_referenced_token_jwt(
     decoding_key: DecodingKey,
 ) -> Result<ReferencedToken, OAuthTSLError> {
     let header = decode_header(token_jwt)?;
-    if header.typ != Some(StatusListTyp::Jwt.as_string()) {
+    if header.typ != Some(StatusListTyp::Jwt.to_string()) {
         return Err(OAuthTSLError::InvalidHeaderTypeClaim(format!(
             "{:?}",
             header.typ
@@ -108,7 +109,7 @@ pub fn decrypt_status_list_token(
     decoding_key: DecodingKey,
 ) -> Result<StatusListToken, OAuthTSLError> {
     let header = decode_header(status_list_jwt)?;
-    if header.typ != Some(StatusListTyp::Jwt.as_string()) {
+    if header.typ != Some(StatusListTyp::Jwt.to_string()) {
         return Err(OAuthTSLError::InvalidHeaderTypeClaim(format!(
             "{:?}",
             header.typ
@@ -184,7 +185,7 @@ mod tests {
         let referenced_token = ReferencedToken {
             header: Header {
                 alg: Algorithm::HS256,
-                typ: Some(StatusListTyp::Jwt.as_string()),
+                typ: Some(StatusListTyp::Jwt.to_string()),
                 ..Default::default()
             },
             claims: ReferencedTokenClaims {
@@ -211,7 +212,7 @@ mod tests {
         let status_list_token = StatusListToken {
             header: Header {
                 alg: Algorithm::HS256,
-                typ: Some(StatusListTyp::Jwt.as_string()),
+                typ: Some(StatusListTyp::Jwt.to_string()),
                 ..Default::default()
             },
             claims: StatusListTokenClaims {

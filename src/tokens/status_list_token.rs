@@ -2,7 +2,7 @@ use chrono::Utc;
 use flate2::{write::GzEncoder, Compression};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
-use std::io::Write;
+use std::{fmt, io::Write};
 
 use crate::{
     error::OAuthTSLError, relying_party::StatusListTokenResponseType,
@@ -62,7 +62,7 @@ impl StatusListToken {
         Self {
             header: Header {
                 alg,
-                typ: Some(StatusListTyp::Jwt.as_string()),
+                typ: Some(StatusListTyp::Jwt.to_string()),
                 ..Default::default()
             },
             claims,
@@ -80,7 +80,7 @@ impl std::default::Default for StatusListToken {
         Self {
             header: Header {
                 alg: Algorithm::ES256,
-                typ: Some(StatusListTyp::Jwt.as_string()),
+                typ: Some(StatusListTyp::Jwt.to_string()),
                 ..Default::default()
             },
             claims: StatusListTokenClaims::default(),
@@ -94,19 +94,13 @@ pub enum StatusListTyp {
     Cwt,
 }
 
-impl StatusListTyp {
-    pub fn as_str(&self) -> &'static str {
-        match self {
+impl fmt::Display for StatusListTyp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
             StatusListTyp::Jwt => "statuslist+jwt",
             StatusListTyp::Cwt => "statuslist+cwt",
-        }
-    }
-
-    pub fn as_string(&self) -> String {
-        match self {
-            StatusListTyp::Jwt => "statuslist+jwt".to_string(),
-            StatusListTyp::Cwt => "statuslist+cwt".to_string(),
-        }
+        };
+        write!(f, "{s}")
     }
 }
 
