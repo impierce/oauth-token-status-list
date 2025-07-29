@@ -28,7 +28,7 @@ impl ReferencedToken {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct ReferencedTokenClaims {
-    pub status: Status,
+    pub status: StatusClaim,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -45,7 +45,7 @@ impl ReferencedTokenClaims {
         iat: Option<i64>,
         exp: Option<i64>,
         ttl: Option<u64>,
-        status: Status,
+        status: StatusClaim,
     ) -> Self {
         Self {
             sub,
@@ -58,7 +58,8 @@ impl ReferencedTokenClaims {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
-pub struct Status {
+pub struct StatusClaim {
+    #[serde(rename = "status_list")]
     pub status_list_claim: StatusListClaim,
 }
 

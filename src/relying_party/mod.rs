@@ -158,7 +158,9 @@ mod tests {
         relying_party::{decrypt_referenced_token_jwt, decrypt_status_list_token},
         status_list::{EncodedStatusList, StatusList},
         tokens::{
-            referenced_token::{ReferencedToken, ReferencedTokenClaims, Status, StatusListClaim},
+            referenced_token::{
+                ReferencedToken, ReferencedTokenClaims, StatusClaim, StatusListClaim,
+            },
             status_list_token::{StatusListToken, StatusListTokenClaims, StatusListTyp},
         },
     };
@@ -169,7 +171,7 @@ mod tests {
             idx: 123,
             ..Default::default()
         };
-        let status = Status { status_list_claim };
+        let status = StatusClaim { status_list_claim };
 
         let referenced_token = ReferencedToken {
             header: Header {
