@@ -8,13 +8,6 @@ keywords = ["revocation", "status", "list"]
 license = "Apache-2.0"
 repository = "https://github.com/impierce/oauth-token-status-list"
 
-[workspace.package]
-homepage = "https://www.impierce.com/"
-license = "Apache-2.0"
-repository = "https://github.com/impierce/oauth-token-status-list"
-
-[workspace.dependencies]
-
 [dependencies]
 base64 = "0.22"
 chrono = "0.4"
