@@ -90,7 +90,9 @@ impl std::default::Default for StatusListToken {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum StatusListTyp {
+    #[serde(rename = "statuslist+jwt")]
     Jwt,
+    #[serde(rename = "statuslist+cwt")]
     Cwt,
 }
 

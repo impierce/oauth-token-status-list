@@ -13,7 +13,9 @@ use std::{fmt, io::Read};
 /// The media types defined for status list tokens.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum StatusListTokenResponseType {
+    #[serde(rename = "application/statuslist+jwt")]
     Jwt,
+    #[serde(rename = "application/statuslist+cwt")]
     Cwt,
 }
 
@@ -66,7 +68,7 @@ pub fn decrypt_referenced_token_jwt(
 
     let token_data = decode::<ReferencedTokenClaims>(token_jwt, &decoding_key, &validation)?;
 
-    let status_list_claim = token_data.claims.status.status_list_claim.clone();
+    let status_list_claim = &token_data.claims.status.status_list_claim;
     let now = chrono::Utc::now().timestamp();
 
     // Check the "issued at" (iat), "subject" (sub) and "expiration" (exp) claims.
