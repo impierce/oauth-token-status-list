@@ -7,7 +7,7 @@ use ts_rs::TS;
 
 use crate::error::OAuthTSLError;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq, Copy)]
 pub enum Bits {
     #[default]
     One = 1,
@@ -30,21 +30,6 @@ impl TryFrom<u8> for Bits {
     }
 }
 
-impl Bits {
-    pub fn as_u8(&self) -> u8 {
-        self.clone() as u8
-    }
-
-    pub fn as_usize(&self) -> usize {
-        match self {
-            Bits::One => 1,
-            Bits::Two => 2,
-            Bits::Four => 4,
-            Bits::Eight => 8,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct EncodedStatusList {
     #[serde(rename = "bits")]
@@ -58,7 +43,7 @@ pub struct EncodedStatusList {
 impl Default for EncodedStatusList {
     fn default() -> Self {
         EncodedStatusList {
-            status_size: Bits::Two.as_u8(),
+            status_size: Bits::Two as u8,
             status_list: String::new(),
             aggregation_uri: None,
         }
@@ -71,7 +56,7 @@ impl TryFrom<StatusList> for EncodedStatusList {
     fn try_from(status_list: StatusList) -> Result<Self, Self::Error> {
         let encoded_list = status_list.compress_encode()?;
         Ok(EncodedStatusList {
-            status_size: status_list.status_size.as_u8(),
+            status_size: status_list.status_size as u8,
             status_list: encoded_list,
             aggregation_uri: status_list.aggregation_uri,
         })
@@ -81,7 +66,7 @@ impl TryFrom<StatusList> for EncodedStatusList {
 impl EncodedStatusList {
     pub fn new(status_size: Bits, status_list: String, aggregation_uri: Option<String>) -> Self {
         EncodedStatusList {
-            status_size: status_size.as_u8(),
+            status_size: status_size as u8,
             status_list,
             aggregation_uri,
         }
@@ -141,7 +126,7 @@ impl StatusList {
         &mut self,
         statuses: Vec<StatusType>,
     ) -> Result<Vec<u8>, OAuthTSLError> {
-        let status_size_usize = self.status_size.as_usize();
+        let status_size_usize = self.status_size as usize;
         let statuses_per_byte = 8 / status_size_usize;
         let mut packed: Vec<u8> = Vec::with_capacity(statuses.len().div_ceil(statuses_per_byte));
         let mut byte: u8 = 0;
@@ -173,13 +158,13 @@ impl StatusList {
     }
 
     pub fn get_index(&self, index: usize) -> Result<u8, OAuthTSLError> {
-        let status_list_len = self.status_list.len() * (8 / self.status_size.as_usize());
+        let status_list_len = self.status_list.len() * (8 / self.status_size as usize);
         if index >= status_list_len {
             return Err(OAuthTSLError::IndexNotFound(index));
         }
 
-        let byte = self.status_list[index * self.status_size.as_usize() / 8];
-        let bit_index = (index * self.status_size.as_usize()) % 8;
+        let byte = self.status_list[index * self.status_size as usize / 8];
+        let bit_index = (index * self.status_size as usize) % 8;
         match self.status_size {
             Bits::One => {
                 let mask = 0b1 << bit_index;
@@ -204,18 +189,18 @@ impl StatusList {
     /// Always enlarges the status list to the required size if it is not already large enough.
     /// Therefore an index can never be out of bounds.
     pub fn set_index(&mut self, index: usize, value: u8) -> Result<(), OAuthTSLError> {
-        if value as u16 >= (1 << self.status_size.as_u8()) {
+        if value as u16 >= (1 << self.status_size as u8) {
             return Err(OAuthTSLError::InvalidStatusType(value));
         }
 
-        let status_list_len = self.status_list.len() * (8 / self.status_size.as_usize());
+        let status_list_len = self.status_list.len() * (8 / self.status_size as usize);
         if index >= status_list_len {
             self.status_list
-                .resize(index * (8 / self.status_size.as_usize()) + 1, 0);
+                .resize(index * (8 / self.status_size as usize) + 1, 0);
         }
 
-        let mut byte = self.status_list[index * self.status_size.as_usize() / 8];
-        let bit_index = (index * self.status_size.as_usize()) % 8;
+        let mut byte = self.status_list[index * self.status_size as usize / 8];
+        let bit_index = (index * self.status_size as usize) % 8;
 
         let mask = match self.status_size {
             Bits::One => 0b1 << bit_index,
@@ -229,7 +214,7 @@ impl StatusList {
         // Set the bits to the new value
         byte |= (value << bit_index) & mask;
 
-        self.status_list[index * self.status_size.as_usize() / 8] = byte;
+        self.status_list[index * self.status_size as usize / 8] = byte;
 
         Ok(())
     }
