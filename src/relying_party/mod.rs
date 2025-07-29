@@ -7,10 +7,11 @@ use crate::{
 };
 use flate2::read::GzDecoder;
 use jsonwebtoken::{decode, decode_header, DecodingKey, Validation};
+use serde::{Deserialize, Serialize};
 use std::io::Read;
 
 /// The media types defined for status list tokens.
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum StatusListTokenResponseType {
     Jwt,
     Cwt,

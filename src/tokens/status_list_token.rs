@@ -85,6 +85,7 @@ impl std::default::Default for StatusListToken {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum StatusListTyp {
     Jwt,
     Cwt,
