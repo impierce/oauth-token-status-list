@@ -4,7 +4,10 @@ use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 
-use crate::{error::OAuthTSLError, status_list::EncodedStatusList};
+use crate::{
+    error::OAuthTSLError, relying_party::StatusListTokenResponseType,
+    status_list::EncodedStatusList,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StatusListTokenClaims {
@@ -103,6 +106,15 @@ impl StatusListTyp {
         match self {
             StatusListTyp::Jwt => "statuslist+jwt".to_string(),
             StatusListTyp::Cwt => "statuslist+cwt".to_string(),
+        }
+    }
+}
+
+impl From<StatusListTokenResponseType> for StatusListTyp {
+    fn from(value: StatusListTokenResponseType) -> Self {
+        match value {
+            StatusListTokenResponseType::Jwt => StatusListTyp::Jwt,
+            StatusListTokenResponseType::Cwt => StatusListTyp::Cwt,
         }
     }
 }

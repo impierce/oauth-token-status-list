@@ -17,6 +17,15 @@ pub enum StatusListTokenResponseType {
     Cwt,
 }
 
+impl From<StatusListTyp> for StatusListTokenResponseType {
+    fn from(value: StatusListTyp) -> Self {
+        match value {
+            StatusListTyp::Jwt => StatusListTokenResponseType::Jwt,
+            StatusListTyp::Cwt => StatusListTokenResponseType::Cwt,
+        }
+    }
+}
+
 impl StatusListTokenResponseType {
     pub fn as_str(&self) -> &'static str {
         match self {
