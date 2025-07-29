@@ -13,8 +13,6 @@ base64 = "0.22"
 chrono = "0.4"
 flate2 = { version = "1.0", default-features = false, features = ["zlib"] }
 jsonwebtoken = "9.3"
-rand = "0.9.1"
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
-tokio = "1"
 ts-rs = "7.0"
