@@ -203,7 +203,7 @@ mod tests {
     #[test]
     pub fn test_decrypt_status_list_token() {
         let mut status_list = StatusList::default();
-        status_list.set_index(4, 1).unwrap();
+        status_list.set_status(4, 1).unwrap();
         let encoded_list: EncodedStatusList = status_list.try_into().unwrap();
 
         let status_list_token = StatusListToken {

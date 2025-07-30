@@ -74,7 +74,7 @@ impl StatusListToken {
     }
 }
 
-/// Default implementation uses ES256 for `alg `, current time for `iat`, empty string for `sub`, no `exp`, no `ttl`, and a default `StatusList`.
+/// Default implementation uses ES256 for `alg`, current time for `iat`, empty string for `sub`, no `exp`, no `ttl`, and a default `StatusList`.
 impl std::default::Default for StatusListToken {
     fn default() -> Self {
         Self {
