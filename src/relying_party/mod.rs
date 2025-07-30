@@ -1,5 +1,6 @@
 use crate::{
     error::OAuthTSLError,
+    status_list::StatusList,
     tokens::{
         referenced_token::{ReferencedToken, ReferencedTokenClaims},
         status_list_token::{StatusListToken, StatusListTokenClaims, StatusListTyp},
@@ -140,14 +141,52 @@ pub fn decrypt_status_list_token(
     Ok(status_list_token)
 }
 
-// Helpers
-
 pub fn decompress_gzip(data: &[u8]) -> Result<String, OAuthTSLError> {
     let mut decoder = GzDecoder::new(data);
     let mut decompressed_data = String::new();
     decoder.read_to_string(&mut decompressed_data)?;
 
     Ok(decompressed_data)
+}
+
+/// Checks the status of a given index in the status list response from the status provider.
+/// Steps:
+/// 1. Decompress the gzip response bytes into the JWT string.
+/// 2. Decrypt the status list token JWT using the given decoding key.
+/// 3. Convert the decoded JWT into a `StatusList` object.
+/// 4. Retrieve the status at the specified index from the `StatusList`.
+/// 5. Returns the status as a `u8`.
+pub fn check_status_in_status_list_response(
+    response_bytes: &[u8],
+    index: usize,
+    decoding_key: DecodingKey,
+) -> Result<u8, OAuthTSLError> {
+    let jwt_status_list_token = decompress_gzip(response_bytes)?;
+    let decoded_jwt = decrypt_status_list_token(&jwt_status_list_token, decoding_key)?;
+    let status_list = StatusList::try_from(decoded_jwt.claims.encoded_status_list)?;
+
+    let status = status_list.get_status(index)?;
+
+    Ok(status)
+}
+
+/// Checks the status of a given index in the status list token JWT string.
+/// Steps:
+/// 1. Decrypt the status list token JWT using the given decoding key.
+/// 2. Convert the decoded JWT into a `StatusList` object.
+/// 3. Retrieve the status at the specified index from the `StatusList`.
+/// 4. Returns the status as a `u8`.
+pub fn check_status_in_status_list_token_jwt(
+    status_list_jwt: &str,
+    index: usize,
+    decoding_key: DecodingKey,
+) -> Result<u8, OAuthTSLError> {
+    let decoded_jwt = decrypt_status_list_token(status_list_jwt, decoding_key)?;
+    let status_list = StatusList::try_from(decoded_jwt.claims.encoded_status_list)?;
+
+    let status = status_list.get_status(index)?;
+
+    Ok(status)
 }
 
 #[cfg(test)]
