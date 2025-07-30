@@ -21,7 +21,7 @@ impl ReferencedToken {
         }
     }
 
-    pub fn create_jwt(self, key: &EncodingKey) -> Result<String, OAuthTSLError> {
+    pub fn create_jwt(&self, key: &EncodingKey) -> Result<String, OAuthTSLError> {
         Ok(encode(&self.header, &self.claims, key)?)
     }
 }

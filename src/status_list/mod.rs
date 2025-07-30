@@ -268,7 +268,7 @@ pub enum StatusType {
     // until 0x0F are permanently reserved as application specific.
     // Meaning free for the implementer to implement.
     UNDEFINED = 3, // Handles values 3 and 11-15 (application-specific)
-    // All other Status Type values are reserved for future registration, therefore not allowed.
+                   // All other Status Type values are reserved for future registration, therefore not allowed.
 }
 
 impl TryFrom<u8> for StatusType {
