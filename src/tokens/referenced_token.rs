@@ -60,18 +60,18 @@ impl ReferencedTokenClaims {
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct StatusClaim {
     #[serde(rename = "status_list")]
-    pub status_list_claim: StatusListClaim,
+    pub referenced_status_list: ReferencedStatusList,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct StatusListClaim {
+pub struct ReferencedStatusList {
     pub idx: i64,
     pub uri: Url,
 }
 
-impl Default for StatusListClaim {
+impl Default for ReferencedStatusList {
     fn default() -> Self {
-        StatusListClaim {
+        ReferencedStatusList {
             idx: 0,
             uri: Url::parse("https://example.com/default").unwrap(),
         }

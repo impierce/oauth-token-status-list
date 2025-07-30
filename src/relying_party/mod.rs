@@ -159,7 +159,7 @@ mod tests {
         status_list::{EncodedStatusList, StatusList},
         tokens::{
             referenced_token::{
-                ReferencedToken, ReferencedTokenClaims, StatusClaim, StatusListClaim,
+                ReferencedStatusList, ReferencedToken, ReferencedTokenClaims, StatusClaim,
             },
             status_list_token::{StatusListToken, StatusListTokenClaims, StatusListTyp},
         },
@@ -167,11 +167,13 @@ mod tests {
 
     #[test]
     pub fn test_decrypt_referenced_token() {
-        let status_list_claim = StatusListClaim {
+        let status_list_claim = ReferencedStatusList {
             idx: 123,
             ..Default::default()
         };
-        let status = StatusClaim { status_list_claim };
+        let status = StatusClaim {
+            referenced_status_list: status_list_claim,
+        };
 
         let referenced_token = ReferencedToken {
             header: Header {
