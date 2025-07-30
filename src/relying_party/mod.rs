@@ -73,17 +73,13 @@ pub fn decrypt_referenced_token_jwt(
     // Check the "issued at" (iat), "subject" (sub) and "expiration" (exp) claims.
     if let Some(iat) = token_data.claims.iat {
         if iat > now {
-            return Err(OAuthTSLError::InvalidReferencedTokenClaims(format!(
-                "{token_data:?}"
-            )));
+            return Err(OAuthTSLError::InvalidReferencedTokenIatClaim(iat));
         }
     }
 
     if let Some(exp) = token_data.claims.exp {
         if exp < now {
-            return Err(OAuthTSLError::ExpiredReferencedToken(format!(
-                "{token_data:?}"
-            )));
+            return Err(OAuthTSLError::ExpiredReferencedToken(exp));
         }
     }
 
@@ -117,18 +113,22 @@ pub fn decrypt_status_list_token(
 
     if token_data.claims.sub.is_empty()
         || token_data.claims.encoded_status_list.status_list.is_empty()
-        || token_data.claims.iat > now
     {
         return Err(OAuthTSLError::InvalidStatusListTokenClaims(format!(
-            "{token_data:?}"
+            "{:?}",
+            token_data.claims
         )));
+    }
+
+    if token_data.claims.iat > now {
+        return Err(OAuthTSLError::InvalidStatusListTokenIatClaim(
+            token_data.claims.iat,
+        ));
     }
 
     if let Some(exp) = token_data.claims.exp {
         if exp < now {
-            return Err(OAuthTSLError::InvalidStatusListTokenClaims(format!(
-                "{token_data:?}"
-            )));
+            return Err(OAuthTSLError::ExpiredStatusListToken(exp));
         }
     }
 
