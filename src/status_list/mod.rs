@@ -35,7 +35,8 @@ pub struct EncodedStatusList {
     pub status_size: u8,
     #[serde(rename = "lst")]
     pub status_list: String,
-    // todo: not implemented yet
+    // Aggregation URI is not implemented yet.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub aggregation_uri: Option<String>,
 }
 
