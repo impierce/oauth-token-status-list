@@ -197,7 +197,7 @@ impl StatusList {
         let status_list_len = self.status_list.len() * (8 / self.status_size as usize);
         if index >= status_list_len {
             self.status_list
-                .resize(index * (8 / self.status_size as usize) + 1, 0);
+                .resize((index + 7) * self.status_size as usize / 8, 0); // + 7 to ensure a full byte even if status size is 1
         }
 
         let mut byte = self.status_list[index * self.status_size as usize / 8];
