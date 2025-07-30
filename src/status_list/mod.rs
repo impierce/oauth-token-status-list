@@ -73,7 +73,7 @@ impl EncodedStatusList {
     }
 
     pub fn decode_decompress(&self) -> Result<Vec<u8>, OAuthTSLError> {
-        let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(&self.status_list)?;
+        let bytes = general_purpose::URL_SAFE_NO_PAD.decode(&self.status_list)?;
         let mut d = ZlibDecoder::new(&bytes[..]);
         let mut out = Vec::new();
         d.read_to_end(&mut out)?;
