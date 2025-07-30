@@ -148,7 +148,7 @@ mod test {
 
         let encoding_key = &EncodingKey::from_secret("secret".as_ref());
 
-        let jwt = status_list_token.create_jwt(&encoding_key).unwrap();
+        let jwt = status_list_token.create_jwt(encoding_key).unwrap();
 
         let decoding_key = DecodingKey::from_secret("secret".as_ref());
         let mut validation = Validation::new(Algorithm::HS256);
