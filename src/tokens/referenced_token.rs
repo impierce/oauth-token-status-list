@@ -26,7 +26,7 @@ impl ReferencedToken {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ReferencedTokenClaims {
     pub status: StatusClaim,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -57,7 +57,7 @@ impl ReferencedTokenClaims {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StatusClaim {
     #[serde(rename = "status_list")]
     pub referenced_status_list: ReferencedStatusList,
@@ -67,13 +67,4 @@ pub struct StatusClaim {
 pub struct ReferencedStatusList {
     pub idx: i64,
     pub uri: Url,
-}
-
-impl Default for ReferencedStatusList {
-    fn default() -> Self {
-        ReferencedStatusList {
-            idx: 0,
-            uri: Url::parse("https://example.com/default").unwrap(),
-        }
-    }
 }

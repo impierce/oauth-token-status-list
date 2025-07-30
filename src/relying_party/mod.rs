@@ -153,6 +153,7 @@ pub fn decompress_gzip(data: &[u8]) -> Result<String, OAuthTSLError> {
 #[cfg(test)]
 mod tests {
     use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header};
+    use url::Url;
 
     use crate::{
         relying_party::{decrypt_referenced_token_jwt, decrypt_status_list_token},
@@ -169,7 +170,7 @@ mod tests {
     pub fn test_decrypt_referenced_token() {
         let status_list_claim = ReferencedStatusList {
             idx: 123,
-            ..Default::default()
+            uri: Url::parse("https://example.com/status/123").unwrap(),
         };
         let status = StatusClaim {
             referenced_status_list: status_list_claim,
@@ -183,7 +184,10 @@ mod tests {
             },
             claims: ReferencedTokenClaims {
                 status,
-                ..Default::default()
+                sub: None,
+                iat: None,
+                exp: None,
+                ttl: None,
             },
         };
 
@@ -210,7 +214,7 @@ mod tests {
             },
             claims: StatusListTokenClaims {
                 sub: "Not empty".to_string(),
-                iat: -1,
+                iat: 1,
                 exp: None,
                 ttl: None,
                 encoded_status_list: encoded_list,
