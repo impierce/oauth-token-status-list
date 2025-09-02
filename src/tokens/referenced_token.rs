@@ -65,6 +65,6 @@ pub struct StatusClaim {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ReferencedStatusList {
-    pub idx: i64,
+    pub idx: u64,
     pub uri: Url,
 }
