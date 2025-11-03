@@ -11,8 +11,8 @@ repository = "https://github.com/impierce/oauth-token-status-list"
 [dependencies]
 base64 = "0.22"
 chrono = "0.4"
-flate2 = { version = "1.0", default-features = false, features = ["zlib"] }
+flate2 = "1.0"
 jsonwebtoken = "9.3"
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
-url = {version = "2.5", features = ["serde"]}
+url = { version = "2.5", features = ["serde"] }
