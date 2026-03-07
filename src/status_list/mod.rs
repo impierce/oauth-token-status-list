@@ -309,6 +309,49 @@ pub enum IndexInput {
 mod test {
     use super::*;
 
+    // This test combines the functions pack_statuses_into_bytes, get_status and set_status to test if their bitshifting logic aligns (least significant bit first).
+    #[test]
+    pub fn test_pack_statuses_and_set_get() {
+        let mut status_list = StatusList {
+            status_size: Bits::Two,
+            status_list: vec![0u8; 8],
+            ..Default::default()
+        };
+
+        let statuses = vec![
+            StatusType::VALID,     // 0b00 packing the statuses from right to left
+            StatusType::INVALID,   // 0b0100
+            StatusType::SUSPENDED, // 0b100100
+            StatusType::UNDEFINED, // 0b11100100 --> Byte 1
+            StatusType::VALID,     // 0b00
+            StatusType::VALID,     // 0b0000
+            StatusType::VALID,     // 0b000000
+            StatusType::VALID,     // 0b00000000 --> Byte 2
+            StatusType::UNDEFINED, // 0b11
+            StatusType::SUSPENDED, // 0b1011
+            StatusType::INVALID,   // 0b011011 <-- index 10
+            StatusType::VALID,     // 0b00011011 --> Byte 3
+            StatusType::UNDEFINED, // 0b11
+            StatusType::INVALID,   // 0b0111
+            StatusType::VALID,     // 0b000111
+            StatusType::SUSPENDED, // 0b10000111 --> Byte 4
+        ];
+
+        status_list.pack_statuses_into_bytes(statuses).unwrap();
+
+        assert_eq!(status_list.get_status(10).unwrap(), 1);
+
+        // Byte 3: 0b00011011 --> 0b00001011
+        status_list.set_status(10, 0).unwrap();
+
+        assert_eq!(status_list.get_status(10).unwrap(), 0);
+
+        assert_eq!(
+            status_list.status_list,
+            vec![0b11100100, 0b00000000, 0b00001011, 0b10000111]
+        );
+    }
+
     #[test]
     pub fn test_pack_statuses_into_bytes_1_byte() {
         let mut status_list = StatusList {
