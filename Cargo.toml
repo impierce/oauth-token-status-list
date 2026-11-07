@@ -1,12 +1,13 @@
 [package]
-name = "oauth_tsl"
+name = "token-status-list"
 version = "0.1.0"
 edition = "2021"
 description = "Rust implementation of the OAuth Token Status List specification by IETF."
 homepage = "https://www.impierce.com/"
 keywords = ["revocation", "status", "list"]
 license = "Apache-2.0"
-repository = "https://github.com/impierce/oauth-token-status-list"
+repository = "https://github.com/impierce/token-status-list"
+include = ["/src", "/CHANGELOG.md", "/README.md"]
 
 [dependencies]
 base64 = "0.22"

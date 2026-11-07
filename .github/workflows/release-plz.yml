@@ -1,0 +1,175 @@
+name: Release-plz
+
+on:
+  push:
+    branches: [main]
+  # Attaches the crate and its provenance to an existing release, when that step failed after
+  # publishing: a rerun would not repeat it, since release-plz finds nothing left to release. Run it
+  # from the release's tag (Run workflow → Use workflow from → Tags), so that the provenance names
+  # the commit the tag points to.
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  # Publish to crates.io, tag and create a GitHub release once the release PR is merged.
+  release:
+    name: Release
+    if: github.repository_owner == 'impierce' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      # crates.io trusted publishing.
+      id-token: write
+    outputs:
+      releases-created: ${{ steps.release-plz.outputs.releases_created }}
+      releases: ${{ steps.release-plz.outputs.releases }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+      # An App token (unlike GITHUB_TOKEN) lets the created tags and releases trigger other workflows.
+      - id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_PLZ_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_PLZ_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: read
+      - id: release-plz
+        uses: release-plz/action@8b5bf233ecb5779f63508db7cd050e948ee77cc2 # v0.5.144
+        with:
+          command: release
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+
+  # Attach each released `.crate` to its GitHub release, exactly as crates.io serves it: the
+  # download must match the checksum in the crates.io index. The provenance job signs these files,
+  # so anyone can check that a crate came from this workflow. A separate job from `release`, outside
+  # the `release` environment (limited to `main`), so that it can also run by hand from a tag.
+  attach:
+    name: Attach crates
+    needs: release
+    if: >-
+      ${{ !cancelled() && github.repository_owner == 'impierce'
+      && (needs.release.outputs.releases-created == 'true' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      tag: ${{ steps.crates.outputs.tag }}
+      hashes: ${{ steps.crates.outputs.hashes }}
+    steps:
+      - id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_PLZ_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_PLZ_PRIVATE_KEY }}
+          permission-contents: write
+      - id: crates
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASES: ${{ needs.release.outputs.releases }}
+        run: |
+          set -euo pipefail
+          # Started by hand for an existing release: `token-status-list` is the only released package,
+          # and the run must be on its tag, which the provenance then names as its source.
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            if ! [[ "$GITHUB_REF" =~ ^refs/tags/(v([0-9]+\.[0-9]+\.[0-9]+))$ ]]; then
+              echo "::error::run this workflow from a release tag such as v1.2.3, not $GITHUB_REF"
+              exit 1
+            fi
+            RELEASES=$(jq -nc --arg version "${BASH_REMATCH[2]}" --arg tag "${BASH_REMATCH[1]}" \
+              '[{package_name: "token-status-list", version: $version, tag: $tag}]')
+          fi
+          mkdir crates
+          # The sparse index path of a crate name (https://doc.rust-lang.org/cargo/reference/registry-index.html#index-files).
+          index_path() {
+            local name="${1,,}"
+            case ${#name} in
+              1) echo "1/$name" ;;
+              2) echo "2/$name" ;;
+              3) echo "3/${name:0:1}/$name" ;;
+              *) echo "${name:0:2}/${name:2:2}/$name" ;;
+            esac
+          }
+          while read -r name version tag; do
+            file="crates/$name-$version.crate"
+            # The index and the CDN can lag a few minutes behind the upload. Each request is
+            # bounded, so a stalled transfer fails into the next attempt.
+            for attempt in $(seq 1 30); do
+              expected=$(curl -fsSL --connect-timeout 10 --max-time 60 "https://index.crates.io/$(index_path "$name")" \
+                | jq -r --arg v "$version" 'select(.vers == $v) | .cksum' || true)
+              if [ -n "$expected" ] \
+                && curl -fsSL --connect-timeout 10 --max-time 120 -o "$file" "https://static.crates.io/crates/$name/$name-$version.crate" \
+                && echo "$expected  $file" | sha256sum --check --status; then
+                break
+              fi
+              if [ "$attempt" = 30 ]; then
+                echo "::error::$name $version is not on crates.io with the indexed checksum"
+                exit 1
+              fi
+              sleep 20
+            done
+            gh release upload "$tag" "$file" --clobber --repo "$GITHUB_REPOSITORY"
+            echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          done < <(jq -r '.[] | "\(.package_name) \(.version) \(.tag)"' <<< "$RELEASES")
+          echo "hashes=$(cd crates && sha256sum -- *.crate | base64 -w0)" >> "$GITHUB_OUTPUT"
+
+  # SLSA build level 3 provenance for the released crates, signed through Sigstore and attached to
+  # the GitHub release as `<file>.intoto.jsonl`; `slsa-verifier` checks it (docs/RELEASE.md).
+  # Only one package is released, so its tag is the release the provenance goes to.
+  provenance:
+    name: Provenance
+    needs: attach
+    if: ${{ !cancelled() && needs.attach.outputs.hashes != '' }}
+    permissions:
+      # Read the workflow run the provenance describes.
+      actions: read
+      # Sign the provenance with the workflow's identity.
+      id-token: write
+      # Upload it to the GitHub release.
+      contents: write
+    # The generator must be referenced by tag, not by commit: the provenance names the builder by
+    # its tag, which `slsa-verifier` checks.
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: ${{ needs.attach.outputs.hashes }}
+      upload-assets: true
+      upload-tag-name: ${{ needs.attach.outputs.tag }}
+
+  # Open or update the release PR with the next version and changelog.
+  release-pr:
+    name: Release PR
+    if: github.repository_owner == 'impierce' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: release-plz-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+      # An App token (unlike GITHUB_TOKEN) lets the release PR trigger QA.
+      - id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_PLZ_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_PLZ_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - uses: release-plz/action@8b5bf233ecb5779f63508db7cd050e948ee77cc2 # v0.5.144
+        with:
+          command: release-pr
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
