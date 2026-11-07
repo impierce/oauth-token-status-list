@@ -59,7 +59,9 @@ slsa-verifier verify-artifact token-status-list-X.Y.Z.crate \
 If attaching them fails after the crate is published (crates.io slow to index it, a GitHub
 outage), run the Release-plz workflow by hand from the release's tag (Actions → Release-plz → Run
 workflow → Use workflow from → Tags → `vX.Y.Z`). It attaches the crate and provenance to that
-release without publishing anything, and refuses to run from a branch. Its provenance names the
+release without publishing anything, and refuses to run from a branch. If the crate was published
+but the tag or GitHub release is missing, create both for the merge commit first, as for the
+[first release](#first-release). Its provenance names the
 tag and the commit it points to, so verify such a release with `--source-tag vX.Y.Z` in place of
 `--source-branch main`.
 
